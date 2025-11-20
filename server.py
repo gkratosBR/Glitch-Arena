@@ -13,7 +13,8 @@ from fastapi import FastAPI, HTTPException, Request, Depends, Header, Background
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+# CORREÇÃO AQUI: Importando ConfigDict para Pydantic V2
+from pydantic import BaseModel, ConfigDict
 
 # Scheduler
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -80,7 +81,8 @@ class InitUserRequest(BaseModel):
 class BetItem(BaseModel):
     gameType: str
     odd: float
-    class Config: extra = "allow" 
+    # CORREÇÃO AQUI: Sintaxe nova do Pydantic V2
+    model_config = ConfigDict(extra='allow')
 
 class PlaceBetRequest(BaseModel):
     betAmount: float
