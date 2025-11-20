@@ -1,0 +1,135 @@
+/* Reset Básico e Fonte */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #0a090c; /* Fundo escuro consistente com o app */
+    color: #e0e0e0;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --- Utilitários de Vidro (Glassmorphism) --- 
+   Reutiliza o estilo do app principal para consistência */
+.glass-card {
+    background: rgba(26, 26, 30, 0.7); /* Um pouco mais opaco para leitura de dados */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: border-color 0.2s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(138, 43, 226, 0.3);
+}
+
+/* --- Tipografia e Gradientes --- */
+.primary-gradient-text {
+    background: linear-gradient(90deg, #8A2BE2, #4169E1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+/* --- Botões --- */
+.btn-primary {
+    background-image: linear-gradient(90deg, #8A2BE2 0%, #4169E1 100%);
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Formulários e Inputs --- */
+.form-input {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.65rem 1rem; /* Ligeiramente mais compacto para o admin */
+    color: white;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #8A2BE2;
+    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.form-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Labels para melhor legibilidade */
+label {
+    color: #9ca3af; /* Gray-400 */
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+/* --- Scrollbar Customizada --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0a090c; 
+}
+::-webkit-scrollbar-thumb {
+    background: #333; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+}
+
+/* --- Utilitários de Login --- */
+#admin-login-shell {
+    background: radial-gradient(circle at center, rgba(138, 43, 226, 0.1) 0%, rgba(10, 9, 12, 1) 70%);
+}
+
+/* Ajustes para listas de dados (Tabelas/Filas) */
+ul#top-winners-list li, ul#kyc-queue-list li {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+ul#top-winners-list li:last-child, ul#kyc-queue-list li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}

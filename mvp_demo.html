@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glitch Arena</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#0a090c] text-white font-[Poppins]">
+
+    <!-- LOADING -->
+    <div id="loading-shell" class="flex min-h-screen justify-center items-center flex-col">
+        <div class="loader w-12 h-12 border-4 border-white/10 border-t-purple-600 rounded-full animate-spin"></div>
+        <p class="mt-4 text-gray-400 text-sm">Iniciando Glitch Arena...</p>
+    </div>
+
+    <!-- AUTHENTICATION -->
+    <div id="auth-shell" class="hidden max-w-4xl mx-auto p-4 min-h-screen flex flex-col">
+        <header class="py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">Glitch Arena</h1>
+            <div>
+                <button id="auth-login-btn" class="text-white font-semibold py-2 px-4 text-sm hover:text-purple-400 transition">Entrar</button>
+                <button id="auth-register-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-5 rounded-lg text-sm hover:scale-105 transition transform">Criar Conta</button>
+            </div>
+        </header>
+
+        <!-- Landing -->
+        <div id="landing-page" class="page active text-center py-16 flex-grow">
+            <h2 class="text-5xl font-bold mb-4">Desafie o Sistema</h2>
+            <p class="text-2xl text-gray-300 mb-8">Use sua habilidade em LoL para ganhar <span class="text-purple-400 font-semibold">Glitchcoins</span>.</p>
+            <button id="landing-cta-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 px-10 rounded-lg text-lg hover:shadow-lg hover:shadow-purple-500/20 transition">Entrar na Arena</button>
+            
+            <div class="mt-24 grid md:grid-cols-3 gap-8 text-left">
+                <div class="glass-card p-6 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+                    <span class="text-3xl font-bold text-purple-500">1.</span>
+                    <h4 class="text-xl font-semibold mt-2">Adquira Glitchcoins</h4>
+                    <p class="text-gray-400 text-sm mt-1">Troque dinheiro real por nossa moeda virtual (GC).</p>
+                </div>
+                <div class="glass-card p-6 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+                    <span class="text-3xl font-bold text-purple-500">2.</span>
+                    <h4 class="text-xl font-semibold mt-2">Aceite Desafios</h4>
+                    <p class="text-gray-400 text-sm mt-1">Cumpra missões de KDA e Vitória no jogo.</p>
+                </div>
+                <div class="glass-card p-6 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+                    <span class="text-3xl font-bold text-purple-500">3.</span>
+                    <h4 class="text-xl font-semibold mt-2">Resgate Prêmios</h4>
+                    <p class="text-gray-400 text-sm mt-1">Acumule GC e troque por recompensas reais.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login -->
+        <div id="login-page" class="page hidden flex justify-center items-center min-h-[60vh] flex-grow">
+            <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 w-full max-w-md">
+                <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
+                <form id="login-form" class="space-y-4">
+                    <p id="login-error-msg" class="text-red-400 text-sm text-center hidden"></p>
+                    <input type="email" id="login-email" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none transition" placeholder="E-mail" required>
+                    <input type="password" id="login-password" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none transition" placeholder="Senha" required>
+                    
+                    <button type="submit" id="login-submit-btn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-lg hover:opacity-90 transition flex justify-center">
+                        <span id="login-btn-text">Entrar</span>
+                        <div id="login-loader" class="loader w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
+                    </button>
+                </form>
+                
+                <div class="relative my-6 text-center">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+                    <span class="relative bg-[#131316] px-2 text-sm text-gray-400">OU</span>
+                </div>
+                
+                <button id="google-login-btn" class="w-full bg-white text-black font-bold py-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20c11 0 20-9 20-20 0-2.3-.1-3.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.4-4.5 2.3-7.2 2.3-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2c4.3-4 5.6-9.7 5.6-16.5 0-2.3-.1-3.6-.4-3.9z"/></svg>
+                    Google
+                </button>
+                
+                <p class="text-center text-sm text-gray-400 mt-6">Novo aqui? <button id="login-goto-register" class="text-purple-400 font-semibold hover:underline">Cadastre-se</button></p>
+            </div>
+        </div>
+
+        <!-- Register -->
+        <div id="register-page" class="page hidden flex justify-center items-center min-h-[60vh] flex-grow">
+            <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 w-full max-w-md">
+                <h2 class="text-3xl font-bold text-center mb-6">Criar Conta</h2>
+                
+                <div class="flex justify-between mb-6 px-2">
+                    <span id="step-ind-1" class="text-xs font-bold text-purple-400">1. Acesso</span>
+                    <span id="step-ind-2" class="text-xs font-bold text-gray-600">2. Pessoal</span>
+                    <span id="step-ind-3" class="text-xs font-bold text-gray-600">3. Confirmar</span>
+                </div>
+
+                <form id="register-form" class="space-y-4">
+                    <p id="register-error-msg" class="text-red-400 text-sm text-center hidden"></p>
+                    
+                    <div id="register-step-1" class="register-step">
+                        <input type="email" id="reg-email" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-3 text-white" placeholder="E-mail" required>
+                        <input type="password" id="reg-password" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-3 text-white" placeholder="Senha (min 6)" required>
+                        <input type="password" id="reg-confirm-password" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-white" placeholder="Confirmar Senha" required>
+                        <button type="button" id="reg-next-step-1" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-500 transition">Avançar</button>
+                    </div>
+
+                    <div id="register-step-2" class="register-step hidden">
+                        <input type="text" id="reg-fullname" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-3 text-white" placeholder="Nome Completo" required>
+                        <input type="text" id="reg-cpf" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-3 text-white" placeholder="CPF (apenas números)" required>
+                        <input type="date" id="reg-birthdate" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-3 text-white text-gray-400" required>
+                        <input type="text" id="reg-referral" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-white uppercase tracking-widest" placeholder="Código de Convite (Opcional)">
+                        <button type="button" id="reg-next-step-2" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-500 transition">Avançar</button>
+                    </div>
+
+                    <div id="register-step-3" class="register-step hidden">
+                        <div class="bg-red-500/10 border border-red-500/30 p-4 rounded-lg mb-4 text-sm text-red-200 space-y-2">
+                            <p>• Proibido contas Smurf ou compartilhadas.</p>
+                            <p>• Proibido "deranking" intencional.</p>
+                        </div>
+                        <div class="flex items-start mb-6">
+                            <input id="reg-terms" type="checkbox" class="mt-1 mr-2">
+                            <label for="reg-terms" class="text-xs text-gray-400">Li e concordo com os <span id="open-terms-btn" class="text-purple-400 cursor-pointer hover:underline font-bold">Termos de Uso</span>. Sou maior de 18 anos.</label>
+                        </div>
+                        <button type="button" id="reg-submit" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-500 transition flex justify-center" disabled>
+                            <span id="reg-btn-text">Finalizar</span>
+                            <div id="reg-loader" class="loader w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
+                        </button>
+                    </div>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-4">Já tem conta? <button id="register-goto-login" class="text-purple-400 hover:underline">Login</button></p>
+            </div>
+        </div>
+
+        <!-- Terms of Use Page (ESTILIZADO) -->
+       <div id="terms-page" class="page hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div class="bg-[#1a1a1e] w-full max-w-2xl rounded-2xl border border-white/10 flex flex-col shadow-2xl max-h-[90vh]">
+                
+                <!-- Header -->
+                <div class="flex justify-between items-center p-6 border-b border-white/10 bg-[#1a1a1e] rounded-t-2xl z-10">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Termos de Uso</h2>
+                        <p class="text-xs text-gray-400 mt-1">Última Atualização: 19/11/2025</p>
+                    </div>
+                    <button id="close-terms-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+
+                <!-- Content (Scrollable) -->
+                <div class="flex-grow overflow-y-auto p-6 text-sm text-gray-300 space-y-8 custom-scroll text-justify leading-relaxed bg-[#131316]">
+                    
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            1. Aceitação dos Termos
+                        </h3>
+                        <p class="mb-4">
+                            Ao acessar e utilizar a plataforma <strong class="text-white">"Glitch Arena"</strong> (doravante "Plataforma"),
+                            operada pela [Projeto Glitch Arena], você ("Usuário", "Jogador") concorda em cumprir e estar
+                            legalmente vinculado a estes Termos de Uso. Se você não concordar com qualquer parte destes
+                            termos, você não está autorizado a utilizar a Plataforma.
+                        </p>
+
+                        <div class="bg-purple-500/10 border border-purple-500/30 p-4 rounded-xl">
+                            <p class="font-bold text-purple-400 text-xs uppercase tracking-wide mb-2">⚠️ Atenção</p>
+                            <p class="text-white/90 text-xs leading-relaxed">
+                                AO UTILIZAR A GLITCH ARENA VOCÊ AUTOMATICAMENTE CONCORDA COM ESTES TERMOS DE USO E COM A
+                                NOSSA POLÍTICA DE PRIVACIDADE. CASO VOCÊ NÃO CONCORDE, VOCÊ NÃO DEVE UTILIZAR A GLITCH ARENA.
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            2. Quem Somos
+                        </h3>
+                        <p>
+                            A Glitch Arena é uma plataforma de performance competitiva concebida com o objetivo de
+                            aprofundar o envolvimento da comunidade e enriquecer a experiência de jogo, mantendo sempre
+                            o "fair play" como pilar central.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            3. Público-Alvo
+                        </h3>
+                        <ul class="space-y-3 list-disc pl-5 marker:text-purple-500">
+                            <li><strong class="text-white">3.1.</strong> A plataforma é destinada a pessoas físicas, maiores de 18 anos, que possuam uma conta dos jogos associados válida e em bom estado.</li>
+                            <li><strong class="text-white">3.2.</strong> Os usuários devem residir em um território que não proíba a participação neste tipo de plataforma.</li>
+                            <li><strong class="text-white">3.3.</strong> É estritamente proibido o cadastro e uso da Plataforma por menores de 18 anos.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            4. Acesso e Cadastro
+                        </h3>
+                        <p class="mb-3"><strong class="text-white">4.1.</strong> Para acessar a Glitch Arena, é necessário realizar um cadastro completo:</p>
+                        <ul class="space-y-2 pl-4 border-l-2 border-white/10 ml-1 text-xs text-gray-400">
+                            <li>a) Fornecimento de informações pessoais válidas.</li>
+                            <li>b) Criação de uma senha segura.</li>
+                            <li>c) Realização do processo de verificação (KYC).</li>
+                            <li>d) Vinculação da conta para validação anti-fraude.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            5. Regras dos Desafios
+                        </h3>
+                        <p class="mb-4">
+                            O Glitch Arena permite que os jogadores estabeleçam "Desafios de Performance" baseados
+                            em seu próprio desempenho. <strong class="text-red-400">NÃO é um serviço de apostas tradicionais com dinheiro real de terceiros.</strong>
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition">
+                                <strong class="text-purple-400 block mb-1 text-sm">Depósito</strong>
+                                <span class="text-xs text-gray-400">Via PIX. Crédito em até 3 dias úteis.</span>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition">
+                                <strong class="text-purple-400 block mb-1 text-sm">Liquidação</strong>
+                                <span class="text-xs text-gray-400">Automática via API oficial. Decisão final.</span>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition md:col-span-2">
+                                <strong class="text-purple-400 block mb-1 text-sm">Saque</strong>
+                                <span class="text-xs text-gray-400">Mínimo de 50 GC. Exige KYC aprovado.</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 bg-red-500/10 p-3 rounded border border-red-500/20">
+                            <p class="text-xs text-red-300 font-bold mb-1">REGRAS IMPORTANTES:</p>
+                            <ul class="list-disc pl-4 text-[11px] text-red-200 space-y-1">
+                                <li>Abandonar partida (AFK) = Perda automática.</li>
+                                <li>Partida "Remake" = Desafio anulado (valor devolvido).</li>
+                                <li>Transferência de saldo entre contas é proibida.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            6. Conduta e "Fair Play"
+                        </h3>
+                        <p class="mb-3 text-xs text-gray-400">Violações resultam em banimento e perda de saldo.</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs font-medium">
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Match fixing</div>
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Hacks / Scripts</div>
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Assédio / AFK</div>
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Smurfing</div>
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Compartilhar Conta</div>
+                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Dados Falsos</div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
+                            7. Disposições Gerais
+                        </h3>
+                        <p class="text-xs">
+                            Não nos responsabilizamos por instabilidades nas APIs da Riot Games. Créditos não geram juros.
+                            O foro eleito é o da Comarca de sua residência no Brasil.
+                        </p>
+                    </section>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t border-white/10 bg-[#1a1a1e] rounded-b-2xl text-center z-10">
+                    <button id="terms-ok-btn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg shadow-purple-900/50 text-lg transform active:scale-95">
+                        Li e Concordo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    <!-- APP MAIN -->
+    <div id="app-shell" class="hidden max-w-2xl mx-auto p-4 pb-28 min-h-screen">
+        
+        <!-- Home -->
+        <div id="home-page" class="page">
+            <h1 class="text-3xl font-bold mb-6">Arena de Jogos</h1>
+            <div id="select-lol" class="game-select-card bg-white/5 border border-white/10 p-4 rounded-xl flex items-center space-x-4 cursor-pointer hover:border-purple-500 transition mb-3">
+                <div class="w-12 h-12 bg-purple-900 rounded-lg flex items-center justify-center font-bold text-xl">L</div>
+                <div>
+                    <h2 class="text-lg font-bold">League of Legends</h2>
+                    <p class="text-xs text-gray-400">Desafios de KDA, Vitória e Farm</p>
+                </div>
+            </div>
+            <div class="bg-white/5 border border-white/10 p-4 rounded-xl flex items-center space-x-4 opacity-50 grayscale mb-3">
+                <div class="w-12 h-12 bg-red-900 rounded-lg flex items-center justify-center font-bold text-xl">V</div>
+                <div><h2 class="text-lg font-bold">Valorant</h2><p class="text-xs">Em breve</p></div>
+            </div>
+        </div>
+
+        <!-- Challenges -->
+        <div id="challenges-page" class="page hidden">
+            <button id="back-to-home" class="text-gray-400 hover:text-white mb-4 flex items-center text-sm"><span class="mr-1">←</span> Voltar</button>
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h1 id="challenges-title" class="text-2xl font-bold">Desafios</h1>
+                    <p id="challenges-subtitle" class="text-xs text-gray-400">Conecte sua conta para ver os multiplicadores.</p>
+                </div>
+            </div>
+            <div id="challenges-list" class="space-y-3"></div>
+            
+            <div id="request-bet-card" class="hidden mt-8 p-6 border-2 border-dashed border-white/10 rounded-xl text-center hover:border-purple-500/50 transition cursor-pointer">
+                <h3 class="font-bold mb-1">Crie seu Desafio</h3>
+                <p class="text-xs text-gray-400 mb-3">Defina sua própria meta de Kills.</p>
+                <button id="open-request-bet-modal" class="bg-white/10 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/20 transition">Personalizar</button>
+            </div>
+        </div>
+
+        <!-- Active Bets -->
+        <div id="bets-page" class="page hidden">
+            <h1 class="text-2xl font-bold mb-6">Desafios Ativos</h1>
+            <div id="active-bets-list" class="space-y-3"></div>
+        </div>
+
+        <!-- History -->
+        <div id="history-page" class="page hidden">
+            <h1 class="text-2xl font-bold mb-6">Histórico</h1>
+            <div id="history-bets-list" class="space-y-3"></div>
+        </div>
+
+        <!-- Profile -->
+        <div id="profile-page" class="page hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">Perfil</h1>
+                <button id="logout-btn" class="text-xs bg-white/10 px-3 py-1 rounded hover:bg-white/20 transition">Sair</button>
+            </div>
+
+            <!-- Wallet Card -->
+            <div class="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-white/10 p-6 rounded-2xl mb-6 relative overflow-hidden shadow-lg">
+                <div class="relative z-10">
+                    <!-- Linha de Saldos -->
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <p class="text-xs text-gray-300 mb-1 uppercase tracking-wide">Glitchcoins (GC)</p>
+                            <h2 id="wallet-balance" class="text-3xl font-bold text-white">GC 0.00</h2>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-purple-300 mb-1 uppercase tracking-wide">Bônus (GC)</p>
+                            <h2 id="bonus-balance" class="text-xl font-bold text-purple-200">GC 0.00</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="open-deposit-modal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-sm transition shadow-lg shadow-green-900/20">Comprar GC</button>
+                        <button id="open-withdraw-modal" class="bg-white/10 hover:bg-white/20 text-white font-bold py-2 rounded-lg text-sm transition">Resgatar</button>
+                    </div>
+                </div>
+                <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
+            </div>
+            
+            <!-- Área de Rollover -->
+            <div id="rollover-container" class="bg-white/5 border border-white/10 p-5 rounded-xl mb-6 hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-semibold text-sm text-gray-300 uppercase tracking-wide">Desbloqueio de Bônus</h3>
+                    <span id="rollover-text" class="text-xs text-purple-400 font-bold">GC 0.00 restantes</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+                    <div id="rollover-bar" class="bg-purple-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-[10px] text-gray-400 mb-3">Use seu saldo de bônus em desafios para converter em Glitchcoins reais.</p>
+                <button id="convert-bonus-btn" class="w-full bg-gray-600 text-white font-bold py-2 rounded-lg text-sm opacity-50 cursor-not-allowed transition" disabled>Converter Bônus</button>
+            </div>
+            
+            <!-- Cupons & Indicação -->
+            <div class="bg-white/5 border border-white/10 p-5 rounded-xl mb-6">
+                <h3 class="font-semibold mb-3 text-sm uppercase tracking-wide text-gray-300">Cupons & Missões</h3>
+                
+                <div class="flex gap-2 mb-4">
+                    <input id="coupon-input" type="text" class="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-sm text-white uppercase placeholder-gray-500 focus:border-purple-500 focus:outline-none transition" placeholder="Código do Cupom">
+                    <button id="redeem-coupon-btn" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 rounded-lg text-sm transition">Ativar</button>
+                </div>
+                
+                <div class="bg-black/20 p-3 rounded-lg text-center border border-white/5 group cursor-pointer relative overflow-hidden">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Seu Código de Convite</p>
+                    <p id="my-referral-code" class="text-lg font-bold text-white tracking-widest group-hover:text-purple-400 transition relative z-10" title="Clique para copiar">---</p>
+                    <div class="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/5 transition duration-300"></div>
+                </div>
+            </div>
+
+            <!-- KYC Card -->
+            <div class="bg-white/5 border border-white/10 p-5 rounded-xl mb-4">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold">Verificação</h3>
+                    <span id="kyc-status" class="text-[10px] font-bold bg-gray-700 px-2 py-1 rounded">PENDENTE</span>
+                </div>
+                <div id="kyc-content" class="text-sm space-y-1 text-gray-400">
+                    <p>Nome: <span id="kyc-fullname" class="text-white">-</span></p>
+                    <p>CPF: <span id="kyc-cpf" class="text-white">-</span></p>
+                </div>
+                <div id="kyc-loading" class="hidden text-xs text-gray-500">Carregando...</div>
+                <button id="kyc-verify-btn" class="mt-3 w-full bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-bold py-2 rounded transition hidden">Validar Dados</button>
+            </div>
+
+            <!-- Connections -->
+            <h3 class="text-lg font-bold mb-3">Contas Vinculadas</h3>
+            <div class="bg-white/5 border border-white/10 p-4 rounded-xl flex justify-between items-center mb-2">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-purple-900 rounded-lg flex items-center justify-center font-bold text-sm">L</div>
+                    <div>
+                        <p class="font-semibold text-sm">League of Legends</p>
+                        <p id="lol-status" class="text-xs text-gray-500">Não conectado</p>
+                    </div>
+                </div>
+                <button id="lol-connect-btn" data-game="lol" class="connect-btn text-xs bg-white/10 px-3 py-1.5 rounded hover:bg-white/20 transition">Conectar</button>
+            </div>
+        </div>
+
+        <div class="py-6 px-4 text-center opacity-50 border-t border-white/5 mt-8 mb-20">
+             <p class="text-[10px] text-gray-600 leading-relaxed">
+                Glitch Arena © 2025. Todos os direitos reservados.
+            </p>
+        </div>
+
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-[#0a090c]/90 backdrop-blur-lg border-t border-white/5 p-2 pb-6 z-30">
+            <div class="max-w-2xl mx-auto flex justify-around">
+                <button data-page="home-page" class="nav-item active p-2 flex flex-col items-center text-purple-500"><span class="text-xl">🏠</span><span class="text-[10px]">Início</span></button>
+                <button data-page="bets-page" class="nav-item p-2 flex flex-col items-center text-gray-500 hover:text-white"><span class="text-xl">⚔️</span><span class="text-[10px]">Desafios</span></button>
+                <button data-page="history-page" class="nav-item p-2 flex flex-col items-center text-gray-500 hover:text-white"><span class="text-xl">📜</span><span class="text-[10px]">Histórico</span></button>
+                <button data-page="profile-page" class="nav-item p-2 flex flex-col items-center text-gray-500 hover:text-white"><span class="text-xl">👤</span><span class="text-[10px]">Perfil</span></button>
+            </div>
+        </nav>
+
+        <!-- Floating Bet Slip -->
+        <div id="bet-slip-fab" class="hidden fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-lg shadow-purple-500/30 flex items-center justify-center cursor-pointer hover:scale-110 transition z-40">
+            <span class="text-2xl">🧾</span>
+            <span id="bet-slip-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border border-[#0a090c]">0</span>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-opacity"></div>
+
+    <!-- Deposit Modal (Compra de Glitchcoins) -->
+    <div id="deposit-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">Comprar Glitchcoins</h3>
+            <div id="deposit-step-1">
+                <p class="text-xs text-gray-400 mb-4">1 Real (BRL) = 1 Glitchcoin (GC)</p>
+                <input type="number" id="deposit-amount" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-white" placeholder="Valor em R$ (Min 20)">
+                
+                <div class="flex gap-2 mb-4">
+                    <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="20">20 GC</button>
+                    <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="50">50 GC</button>
+                    <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="100">100 GC</button>
+                </div>
+
+                <div class="mb-4">
+                    <label class="text-xs text-gray-400 mb-1 block">Cupom (Opcional)</label>
+                    <input type="text" id="deposit-coupon-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white uppercase tracking-widest placeholder-gray-600 text-sm" placeholder="CÓDIGO">
+                </div>
+
+                <p id="deposit-error-msg" class="text-red-400 text-xs mb-3 hidden"></p>
+                <div class="flex justify-end gap-3">
+                    <button id="deposit-modal-cancel" class="text-sm text-gray-400 hover:text-white">Cancelar</button>
+                    <button id="deposit-confirm-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg text-sm hover:bg-green-500 flex items-center justify-center gap-2">
+                        <span id="deposit-btn-text">Gerar PIX</span>
+                        <div id="deposit-loader" class="loader w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
+                    </button>
+                </div>
+            </div>
+            <div id="deposit-step-2" class="hidden text-center">
+                <div class="bg-white p-2 rounded-lg inline-block mb-4"><img id="deposit-qrcode-img" src="" class="w-40 h-40"></div>
+                <div class="bg-black/30 p-2 rounded mb-4 flex items-center">
+                    <input type="text" id="deposit-copypaste" class="bg-transparent w-full text-xs text-gray-300 outline-none" readonly>
+                    <button id="deposit-copy-btn" class="ml-2 text-purple-400 text-xs font-bold">COPIAR</button>
+                </div>
+                <p class="text-xs text-green-400 mb-4">Após pagar, suas Glitchcoins cairão automaticamente.</p>
+                <button id="deposit-finish-btn" class="w-full bg-gray-700 py-2 rounded-lg text-sm font-bold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdraw-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto shadow-2xl">
+            <h3 class="text-xl font-bold mb-2">Resgatar Prêmios</h3>
+            <p class="text-xs text-gray-400 mb-4">Converta Glitchcoins em dinheiro real (PIX).</p>
+            <input type="number" id="withdraw-amount" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-1 text-white" placeholder="Qtd. Glitchcoins (Min 50)">
+            <p class="text-[10px] text-gray-500 mb-4 text-right">Disponível: <span id="withdraw-max-balance" class="text-white font-bold">GC 0,00</span></p>
+            <input type="text" id="withdraw-pix-key" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-gray-400 cursor-not-allowed" readonly>
+            <p id="withdraw-error-msg" class="text-red-400 text-xs mb-3 hidden"></p>
+            <div class="flex justify-end gap-3">
+                <button id="withdraw-modal-cancel" class="text-sm text-gray-400 hover:text-white">Cancelar</button>
+                <button id="withdraw-confirm-btn" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg text-sm hover:bg-purple-500 flex items-center justify-center gap-2">
+                    <span id="withdraw-btn-text">Solicitar</span>
+                    <div id="withdraw-loader" class="loader w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connect Modal -->
+    <div id="connect-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto">
+            <h3 id="connect-modal-title" class="text-lg font-bold mb-4">Conectar Conta</h3>
+            <input type="text" id="riot-id-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-white" placeholder="Riot ID (Nome#TAG)">
+            <div class="flex items-start mb-4">
+                <input id="connect-terms-check" type="checkbox" class="mt-1 mr-2">
+                <label for="connect-terms-check" class="text-xs text-gray-400">Vincular esta conta ao Glitch Arena.</label>
+            </div>
+            <p id="connect-error-msg" class="text-red-400 text-xs mb-3 hidden"></p>
+            <div class="flex justify-end gap-3">
+                <button id="connect-modal-cancel" class="text-sm text-gray-400">Cancelar</button>
+                <button id="connect-modal-submit" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg text-sm opacity-50 flex items-center justify-center gap-2" disabled>
+                    <span id="connect-btn-text">Conectar</span>
+                    <div id="connect-loader" class="loader w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KYC Modal -->
+    <div id="kyc-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto">
+            <h3 class="text-lg font-bold mb-4">Verificação de Identidade</h3>
+            <form id="kyc-form" class="space-y-3">
+                <input type="text" id="kyc-modal-fullname" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white" placeholder="Nome Completo" required>
+                <input type="text" id="kyc-modal-cpf" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white" placeholder="CPF" required>
+                <input type="date" id="kyc-modal-birthdate" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white text-gray-400" required>
+                <p id="kyc-error-msg" class="text-red-400 text-xs hidden"></p>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" id="kyc-modal-cancel" class="text-sm text-gray-400">Cancelar</button>
+                    <button type="submit" id="kyc-modal-submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg text-sm">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bet Slip Modal -->
+    <div id="bet-slip-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-4 pointer-events-auto flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold">Boletim de Desafios</h3>
+                <button id="bet-slip-modal-close" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div id="bet-slip-list" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1"></div>
+            <div class="border-t border-white/10 pt-4 space-y-2">
+                <p id="bet-slip-limit-info" class="text-xs text-yellow-500 text-center hidden"></p>
+                <div class="flex justify-between text-sm"><span class="text-gray-400">Mult. Total:</span> <span id="bet-slip-total-odd" class="font-bold text-purple-400">1.00x</span></div>
+                <input type="number" id="bet-amount-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-white text-center" value="10" placeholder="Qtd. Glitchcoins">
+                <div class="flex justify-between text-lg font-bold"><span class="text-gray-400">Potencial:</span> <span id="bet-potential-winnings" class="text-green-400">10 GC</span></div>
+                <p id="bet-slip-error-msg" class="text-red-400 text-xs text-center hidden"></p>
+                <button id="place-bet-btn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 py-3 rounded-xl font-bold shadow-lg shadow-purple-900/20">Aceitar Desafio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Bet Modal -->
+    <div id="request-bet-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto text-center">
+            <h3 class="font-bold text-lg mb-4">Desafio Personalizado</h3>
+            
+            <div id="request-form-container">
+                <p class="text-gray-400 text-xs mb-4">Qual sua meta de Kills para a próxima partida?</p>
+                <input type="number" id="request-target-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-2 text-white text-center" placeholder="Ex: 15">
+                <p id="request-error-msg" class="text-red-400 text-xs mb-4 hidden"></p>
+                <div class="flex justify-end gap-2">
+                    <button id="request-modal-cancel" class="text-sm text-gray-400 px-3">Cancelar</button>
+                    <button id="request-modal-submit" class="bg-purple-600 px-6 py-2 rounded-lg font-bold text-sm">Calcular Mult.</button>
+                </div>
+            </div>
+
+            <div id="request-result-container" class="hidden">
+                <div class="bg-white/5 p-4 rounded-xl mb-4">
+                    <h4 id="request-result-title" class="font-bold">Meta</h4>
+                    <p class="text-xs text-gray-400">Multiplicador</p>
+                    <span id="request-result-odd" class="text-3xl font-bold text-purple-400">1.00x</span>
+                </div>
+                <button id="request-add-to-slip" class="w-full bg-purple-600 py-2 rounded-lg font-bold mb-2">Adicionar ao Boletim</button>
+                <button id="request-try-again" class="text-xs text-gray-400 hover:text-white">Tentar outro valor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Message -->
+    <div id="message-modal" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[70]">
+        <div id="message-modal-content" class="px-6 py-3 rounded-full shadow-2xl font-semibold text-sm"></div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+firebase-admin
+apscheduler
+google-cloud-firestore
+pydantic
