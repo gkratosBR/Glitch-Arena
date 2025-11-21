@@ -3,28 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glitch Arena</title>
+    <title>Glitch Arena (Alpha)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- VERSÃO 3.0: Clean Slate (Sem cache antigo) -->
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <!-- VERSÃO 3.1: Com Aviso Alpha -->
+    <link rel="stylesheet" href="style.css?v=3.1">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-[#0a090c] text-white font-[Poppins]">
+<body class="min-h-screen bg-[#0a090c] text-white font-[Poppins] pt-8"> <!-- Adicionei pt-8 para compensar o banner -->
 
-    <!-- LOADING (Começa visível) -->
-    <!-- Este é o único elemento visível inicialmente. O JS vai escondê-lo quando estiver pronto. -->
+    <!-- BANNER ALPHA (FIXO NO TOPO) -->
+    <div class="fixed top-0 left-0 right-0 bg-yellow-600/90 text-white text-[10px] md:text-xs font-bold text-center py-2 z-[100] backdrop-blur-sm shadow-lg border-b border-yellow-500/50">
+        🚧 VERSÃO ALPHA DE TESTES: Layouts, saldos e regras podem mudar a qualquer momento. 🚧
+    </div>
+
+    <!-- LOADING -->
     <div id="loading-shell" class="flex min-h-screen justify-center items-center flex-col z-50 fixed inset-0 bg-[#0a090c]">
         <div class="loader w-12 h-12 border-4 border-white/10 border-t-purple-600 rounded-full animate-spin"></div>
         <p class="mt-4 text-gray-400 text-sm">Carregando Arena...</p>
     </div>
 
-    <!-- AUTHENTICATION SHELL (Começa oculto via classe hidden) -->
-    <!-- O JS vai remover 'hidden' e adicionar 'flex' quando for mostrar -->
-    <div id="auth-shell" class="hidden min-h-screen flex-col items-center justify-center p-4 max-w-4xl mx-auto">
-        <header class="w-full py-6 flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">Glitch Arena</h1>
+    <!-- AUTHENTICATION SHELL -->
+    <div id="auth-shell" class="hidden min-h-screen flex-col items-center justify-center p-4 max-w-4xl mx-auto relative">
+        
+        <!-- Marca d'água de fundo -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 select-none overflow-hidden">
+            <h1 class="text-[15vw] font-bold text-white rotate-[-15deg]">ALPHA</h1>
+        </div>
+
+        <header class="w-full py-6 flex justify-between items-center mb-8 relative z-10">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">Glitch Arena <span class="text-[10px] bg-yellow-600 text-white px-2 py-0.5 rounded ml-1 align-middle">ALPHA</span></h1>
             <div class="space-x-2">
                 <button id="auth-login-btn" class="text-white font-semibold py-2 px-4 text-sm hover:text-purple-400 transition">Entrar</button>
                 <button id="auth-register-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-5 rounded-lg text-sm hover:scale-105 transition transform">Criar Conta</button>
@@ -32,7 +41,7 @@
         </header>
 
         <!-- Landing Page -->
-        <div id="landing-page" class="page active w-full text-center flex-grow flex flex-col justify-center">
+        <div id="landing-page" class="page active w-full text-center flex-grow flex flex-col justify-center relative z-10">
             <h2 class="text-5xl font-bold mb-6 leading-tight">Desafie o <br><span class="text-purple-500">Sistema</span></h2>
             <p class="text-xl text-gray-300 mb-10 max-w-lg mx-auto">Aposte na sua própria habilidade em League of Legends.</p>
             
@@ -60,8 +69,11 @@
         </div>
 
         <!-- Login Page -->
-        <div id="login-page" class="page hidden w-full max-w-md">
-            <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10">
+        <div id="login-page" class="page hidden w-full max-w-md relative z-10">
+            <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 relative overflow-hidden">
+                <!-- Faixa Alpha no Card -->
+                <div class="absolute top-0 right-0 bg-yellow-600 text-[10px] px-3 py-1 font-bold rounded-bl-lg">v0.3</div>
+                
                 <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
                 <form id="login-form" class="space-y-4">
                     <p id="login-error-msg" class="text-red-400 text-sm text-center hidden"></p>
@@ -85,11 +97,10 @@
         </div>
 
         <!-- Register Page -->
-        <div id="register-page" class="page hidden w-full max-w-md">
+        <div id="register-page" class="page hidden w-full max-w-md relative z-10">
             <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10">
                 <h2 class="text-2xl font-bold text-center mb-6">Criar Conta</h2>
                 
-                <!-- Steps -->
                 <div class="flex justify-between mb-6 px-2">
                     <span id="step-ind-1" class="text-xs font-bold text-purple-400">1. Acesso</span>
                     <span id="step-ind-2" class="text-xs font-bold text-gray-600">2. Pessoal</span>
@@ -152,13 +163,22 @@
         </div>
     </div>
 
-    <!-- APP SHELL (App Principal - Começa oculto) -->
-    <!-- O JS vai remover 'hidden' e adicionar 'block' quando o usuário logar -->
+    <!-- APP SHELL -->
     <div id="app-shell" class="hidden max-w-2xl mx-auto p-4 pb-28 min-h-screen">
         
         <!-- Home Page -->
         <div id="home-page" class="page">
-            <h1 class="text-3xl font-bold mb-6">Arena de Jogos</h1>
+            <h1 class="text-3xl font-bold mb-6">Arena de Jogos <span class="text-xs font-normal text-yellow-500 border border-yellow-500 px-2 py-1 rounded-full ml-2 align-middle">ALPHA</span></h1>
+            
+            <!-- Aviso Interno -->
+            <div class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-6 flex items-start gap-3">
+                <span class="text-xl">🚧</span>
+                <div>
+                    <h4 class="text-sm font-bold text-yellow-400">Ambiente de Testes</h4>
+                    <p class="text-xs text-gray-400">Este é um MVP Alpha. Funcionalidades podem mudar e o layout será aprimorado.</p>
+                </div>
+            </div>
+
             <div id="select-lol" class="game-select-card bg-white/5 border border-white/10 p-4 rounded-xl flex items-center space-x-4 cursor-pointer hover:border-purple-500 transition mb-3">
                 <div class="w-12 h-12 bg-purple-900 rounded-lg flex items-center justify-center font-bold text-xl">L</div>
                 <div>
@@ -187,7 +207,7 @@
             </div>
         </div>
 
-        <!-- Outras Páginas (Bets, History, Profile) -->
+        <!-- Outras Páginas -->
         <div id="bets-page" class="page hidden">
             <h1 class="text-2xl font-bold mb-6">Ativas</h1>
             <div id="active-bets-list" class="space-y-3"></div>
@@ -307,7 +327,7 @@
         </div>
     </div>
 
-    <!-- Outros Modais Essenciais (Simplificados) -->
+    <!-- Outros Modais -->
     <div id="withdraw-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 class="font-bold mb-2">Sacar</h3><input id="withdraw-amount" class="form-input" placeholder="Qtd GC"><p class="text-xs text-right mb-2 text-gray-400">Max: <span id="withdraw-max-balance">0</span></p><input id="withdraw-pix-key" class="form-input bg-gray-800" readonly><p id="withdraw-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2"><button id="withdraw-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button id="withdraw-confirm-btn" class="bg-purple-600 px-4 py-2 rounded text-sm font-bold">Solicitar</button></div><div id="withdraw-loader" class="hidden text-center"><div class="loader w-4 h-4 inline-block"></div></div></div></div>
     <div id="connect-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 id="connect-modal-title" class="font-bold mb-4">Conectar</h3><input id="riot-id-input" class="form-input" placeholder="Riot ID"><div class="flex items-center mb-4"><input type="checkbox" id="connect-terms-check" class="mr-2"><label for="connect-terms-check" class="text-xs text-gray-400">Confirmar vínculo</label></div><p id="connect-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2"><button id="connect-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button id="connect-modal-submit" class="bg-purple-600 px-4 py-2 rounded text-sm font-bold opacity-50" disabled>Conectar</button></div><div id="connect-loader" class="hidden text-center"><div class="loader w-4 h-4 inline-block"></div></div></div></div>
     <div id="kyc-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 class="font-bold mb-4">Dados Pessoais</h3><form id="kyc-form"><input id="kyc-modal-fullname" class="form-input" placeholder="Nome"><input id="kyc-modal-cpf" class="form-input" placeholder="CPF"><input type="date" id="kyc-modal-birthdate" class="form-input"><p id="kyc-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2 mt-2"><button type="button" id="kyc-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button type="submit" id="kyc-modal-submit" class="bg-blue-600 px-4 py-2 rounded text-sm font-bold">Salvar</button></div></form></div></div>
@@ -318,6 +338,6 @@
     <div id="message-modal" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[70]"><div id="message-modal-content" class="px-6 py-3 rounded-full shadow-2xl font-bold text-sm"></div></div>
 
     <!-- JS V3.0 -->
-    <script type="module" src="app.js?v=3.0"></script>
+    <script type="module" src="app.js?v=3.1"></script>
 </body>
 </html>
