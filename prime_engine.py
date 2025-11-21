@@ -86,11 +86,15 @@ def _get_player_main_role(roles_list):
     except: return "UNKNOWN"
 
 def _get_role_weighted_prob(stats, mkt_type, main_role, margin, safety_red):
-    freq_key = f"{market_type}_frequency"
+    # CORREÇÃO AQUI: Usava 'market_type' (undefined), agora usa 'mkt_type'
+    freq_key = f"{mkt_type}_frequency"
+    
     base_prob = stats.get(freq_key, DEFAULT_BASE_PROB.get(mkt_type, 0.05))
     if base_prob == 0.0: base_prob = DEFAULT_BASE_PROB.get(mkt_type, 0.05)
+    
     role_map_key = 'damage' if 'damage' in mkt_type else 'farm' if 'farm' in mkt_type else 'mvp'
     role_weight = ROLE_WEIGHTS.get(role_map_key, {}).get(main_role, 1.0)
+    
     true_prob = base_prob * role_weight
     return _calculate_odd(_calculate_implied_prob(true_prob, margin), safety_red)
 
@@ -172,34 +176,33 @@ def calculate_custom_odd(account_data, game_type, target_value, margins, math_co
     
     return {
         "challenge": {
-            "id": f"custom_{game_type}_{target}", "title": f"Fazer +{target} Kills", "odd": final_odd,
-            "conflictKey": f"custom_target_{target}", "gameType": game_type, "targetStat": "kills", "targetValue": target
+            "id": f"custom_{game_type}_{target}",
+            "title": f"Fazer +{target} Kills",
+            "odd": final_odd,
+            "conflictKey": f"custom_target_{target}",
+            "gameType": game_type,
+            "targetStat": "kills",
+            "targetValue": target
         }
     }
 
-# --- DIAGNÓSTICO E ANALYTICS (NOVO) ---
+# --- DIAGNÓSTICO E ANALYTICS ---
 def get_player_analytics(player_data, math_config):
-    """ Gera um relatório textual das estatísticas calculadas para Logs """
     stats = player_data.get("stats", {})
     
-    # Configs
     min_scalar = math_config.get('min_difficulty', 0.25)
     max_scalar = math_config.get('max_difficulty', 0.65)
     
-    # 1. Winrate Logic
     raw_wr = stats.get("winRate", 0.5)
     weighted_wr = _get_weighted_winrate(stats)
     
-    # Interpolação
     norm_wr = (max(MIN_WR_FOR_SCALAR, min(weighted_wr, MAX_WR_FOR_SCALAR)) - MIN_WR_FOR_SCALAR) / (MAX_WR_FOR_SCALAR - MIN_WR_FOR_SCALAR)
     scalar = min_scalar + (norm_wr * (max_scalar - min_scalar))
     
-    # 2. Kills Logic
     raw_kills = stats.get("avgKills", 0)
     weighted_kills = _get_weighted_avg_stat(stats, "kill", 0)
     target_kills = math.ceil(weighted_kills * (1 + scalar))
     
-    # 3. Role
     role = _get_player_main_role(stats.get("player_roles", []))
     
     return {
