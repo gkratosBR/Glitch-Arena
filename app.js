@@ -17,9 +17,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const API_URL = ''; // Vazio pois o frontend e backend estão na mesma origem
+const API_URL = ''; 
 
-// Configura persistência para evitar deslogar ao atualizar a página
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 const appState = {
@@ -52,7 +51,6 @@ async function fetchWithAuth(endpoint, options = {}) {
     
     if (response.status === 401) {
         try {
-            // Tenta renovar o token se expirou
             idToken = await appState.currentUser.getIdToken(true);
             options.headers['Authorization'] = `Bearer ${idToken}`;
             response = await fetch(`${API_URL}${endpoint}`, options);
@@ -76,20 +74,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAppListeners();
 });
 
-// --- INICIALIZAÇÃO CORRIGIDA ---
+// --- INICIALIZAÇÃO (LOGS [SYSTEM] PARA CONFIRMAR VERSÃO) ---
 function initializeMainApp() {
-    console.log(">>> [Debug] Monitor de Auth iniciado...");
+    console.log(">>> [System] Inicializando App v2.3...");
     onAuthStateChanged(auth, async (user) => {
         if (appState.isRegistering) return;
         
         if (user) {
-            console.log(">>> [Debug] Usuário detectado:", user.uid);
+            console.log(">>> [System] Usuário detectado:", user.uid);
             appState.currentUser = user;
             try {
-                console.log(">>> [Debug] Buscando dados do perfil...");
                 const data = await fetchWithAuth('/api/get-user-data');
-                console.log(">>> [Debug] Dados recebidos com sucesso.");
-                
                 Object.assign(appState, {
                     wallet: data.wallet || 0,
                     bonus_wallet: data.bonus_wallet || 0,
@@ -107,27 +102,120 @@ function initializeMainApp() {
                 
                 updateWalletUI();
                 updateProfileUI();
-                console.log(">>> [Debug] UI atualizada. Chamando showApp()...");
                 showApp();
             } catch (e) {
-                console.error(">>> [Debug] ERRO FATAL na inicialização:", e);
-                // Se der erro ao buscar dados (ex: servidor offline), desloga o user
-                // Isso evita que ele fique preso na tela de loading ou tela preta
+                console.error(">>> [System] Erro init:", e);
                 await signOut(auth);
                 showAuth();
                 if (!e.message.includes("404")) {
-                    showMessage("Erro de conexão. Por favor, faça login novamente.", 'error');
+                    showMessage("Erro de conexão. Reconectando...", 'error');
                 }
             }
         } else {
-            console.log(">>> [Debug] Nenhum usuário logado. Exibindo Auth.");
+            console.log(">>> [System] Sem sessão. Mostrando Login.");
             appState.currentUser = null;
             showAuth();
         }
     });
 }
 
-// --- CONFIGURAÇÃO DE EVENTOS ---
+// --- NAVEGAÇÃO BLINDADA ---
+
+function navigateAuth(pageId) {
+    document.querySelectorAll('.page').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = ''; 
+    });
+    const target = document.getElementById(pageId);
+    if(target) {
+        target.classList.add('active');
+    }
+    appState.currentAuthPage = pageId;
+}
+
+function navigateApp(pageId) {
+    if (appState.currentAppPage === pageId) return;
+    
+    if (appState.currentAppPage) {
+        const curr = document.getElementById(appState.currentAppPage);
+        if(curr) curr.classList.remove('active');
+    }
+    
+    const target = document.getElementById(pageId);
+    if(target) {
+        target.classList.add('active');
+        // REMOVE HIDDEN do Tailwind se existir na página específica
+        target.classList.remove('hidden'); 
+    }
+    
+    appState.currentAppPage = pageId;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === pageId));
+    
+    if (pageId === 'home-page') appState.currentGame = null;
+    if (pageId === 'profile-page') updateProfileUI();
+    if (pageId === 'bets-page') fetchAndRenderActiveBets();
+    if (pageId === 'history-page') fetchAndRenderHistoryBets();
+}
+
+// --- GERENCIAMENTO DE TELAS (O CORAÇÃO DO FIX) ---
+
+function toggleShells(isApp) {
+    const loading = document.getElementById('loading-shell');
+    const authShell = document.getElementById('auth-shell');
+    const appShell = document.getElementById('app-shell');
+
+    // Esconde Loading
+    if(loading) loading.classList.add('hidden');
+
+    if (isApp) {
+        // Esconde Auth
+        if(authShell) {
+            authShell.classList.add('hidden');
+            authShell.classList.remove('flex'); 
+        }
+        // Mostra App
+        if(appShell) {
+            console.log(">>> [System] Revelando App Shell (Removendo .hidden)");
+            appShell.classList.remove('hidden'); // ESSENCIAL: Remove a classe do Tailwind
+            appShell.style.display = 'block'; // Força display
+            setTimeout(() => appShell.style.opacity = '1', 50);
+        }
+    } else {
+        // Mostra Auth
+        if(authShell) {
+            authShell.classList.remove('hidden');
+            authShell.style.display = 'flex';
+        }
+        // Esconde App
+        if(appShell) {
+            appShell.classList.add('hidden');
+            appShell.style.display = 'none';
+        }
+    }
+}
+
+function showApp() { 
+    toggleShells(true); 
+    appState.currentAppPage = null; 
+    navigateApp('home-page');
+    
+    // Verificação final de segurança para forçar exibição
+    setTimeout(() => {
+        const home = document.getElementById('home-page');
+        if(home && getComputedStyle(home).display === 'none') {
+            console.warn(">>> [System] Forçando visibilidade da Home via JS");
+            home.style.display = 'block';
+            home.style.opacity = '1';
+        }
+    }, 200);
+}
+
+function showAuth() { 
+    toggleShells(false); 
+    navigateAuth('landing-page'); 
+}
+
+// --- LISTENERS E UI (Mantidos) ---
 
 function setupAuthListeners() {
     const ids = ['auth-login-btn', 'register-goto-login', 'auth-register-btn', 'landing-cta-btn', 'login-goto-register'];
@@ -137,7 +225,6 @@ function setupAuthListeners() {
     document.getElementById('reg-submit').addEventListener('click', handleRegister); 
     document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
 
-    // Lógica dos Termos de Uso
     document.getElementById('open-terms-btn').addEventListener('click', () => navigateAuth('terms-page'));
     const closeTerms = () => navigateAuth('register-page');
     document.getElementById('close-terms-btn').addEventListener('click', closeTerms);
@@ -257,8 +344,6 @@ function goToRegisterStep(step) {
     });
 }
 
-// --- AUTENTICAÇÃO ---
-
 async function handleLogin(e) {
     e.preventDefault();
     toggleLoading('login', true);
@@ -330,89 +415,6 @@ async function handleLogout() {
     Object.assign(appState, { wallet: 0, bonus_wallet: 0, rollover_target: 0, connectedAccounts: {}, betSlip: [], currentGame: null, currentBetLimit: 3.00 });
     showAuth();
 }
-
-// --- NAVEGAÇÃO (Corrigida para evitar tela preta) ---
-
-function navigateAuth(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(pageId);
-    if(target) target.classList.add('active');
-    appState.currentAuthPage = pageId;
-}
-
-function navigateApp(pageId) {
-    if (appState.currentAppPage === pageId) return;
-    
-    // Remove active class from current page
-    if (appState.currentAppPage) {
-        const curr = document.getElementById(appState.currentAppPage);
-        if(curr) curr.classList.remove('active');
-    }
-    
-    // Add active class to new page
-    const target = document.getElementById(pageId);
-    if(target) {
-        target.classList.add('active');
-        // FORÇAR VISIBILIDADE (Fix Tela Preta)
-        target.style.display = 'block';
-        setTimeout(() => target.style.opacity = '1', 10);
-    }
-    
-    appState.currentAppPage = pageId;
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === pageId));
-    
-    if (pageId === 'home-page') appState.currentGame = null;
-    if (pageId === 'profile-page') updateProfileUI();
-    if (pageId === 'bets-page') fetchAndRenderActiveBets();
-    if (pageId === 'history-page') fetchAndRenderHistoryBets();
-}
-
-function showApp() { 
-    console.log(">>> [Debug] showApp() chamado.");
-    toggleShells(true); 
-    
-    // Reseta o estado para garantir que a navegação dispare
-    appState.currentAppPage = null;
-    navigateApp('home-page'); 
-
-    // VERIFICAÇÃO DE SEGURANÇA MANUAL (O FIX PRINCIPAL)
-    setTimeout(() => {
-        const home = document.getElementById('home-page');
-        if (home) {
-            const style = window.getComputedStyle(home);
-            if (style.display === 'none' || style.opacity === '0') {
-                console.warn(">>> [Debug] ALERTA: Tela preta detectada. Forçando exibição via JS.");
-                home.style.display = 'block';
-                home.style.opacity = '1';
-                home.classList.add('active');
-            }
-        }
-    }, 100); // Pequeno delay para deixar o DOM respirar
-}
-
-function showAuth() { 
-    console.log(">>> [Debug] showAuth() chamado.");
-    toggleShells(false); 
-    navigateAuth('landing-page'); 
-}
-
-function toggleShells(isApp) {
-    const loading = document.getElementById('loading-shell');
-    const authShell = document.getElementById('auth-shell');
-    const appShell = document.getElementById('app-shell');
-
-    if(loading) loading.style.display = 'none';
-    
-    if (isApp) {
-        if(authShell) authShell.style.display = 'none';
-        if(appShell) appShell.style.display = 'block';
-    } else {
-        if(authShell) authShell.style.display = 'block';
-        if(appShell) appShell.style.display = 'none';
-    }
-}
-
-// --- LÓGICA DO APP ---
 
 async function selectGame(gameType) {
     if (gameType !== 'lol') return showMessage("Em breve!", 'info');
