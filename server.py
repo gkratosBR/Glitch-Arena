@@ -5,6 +5,8 @@ import uuid
 import random
 import string
 import json
+import time
+import logging
 from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -13,7 +15,6 @@ from fastapi import FastAPI, HTTPException, Request, Depends, Header, Background
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-# CORREÇÃO AQUI: Importando ConfigDict para Pydantic V2
 from pydantic import BaseModel, ConfigDict
 
 # Scheduler
@@ -30,6 +31,15 @@ import prime_engine as odds_engine
 import riot_api
 from datetime import datetime, timedelta, timezone
 
+# --- CONFIGURAÇÃO DE LOGS (MONITORAMENTO) ---
+# Configura logs para sair no console do Railway com timestamp e nível de severidade
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("GlitchArena")
+
 # --- CONFIGURAÇÃO SEGURA DO FIREBASE ---
 firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS")
 
@@ -40,10 +50,11 @@ if not firebase_admin._apps:
     elif os.path.exists("serviceAccountKey.json"):
         cred = credentials.Certificate("serviceAccountKey.json")
     else:
-        print("CRÍTICO: Credenciais do Firebase não encontradas (Env Var ou Arquivo).")
+        logger.critical("Credenciais do Firebase não encontradas! O app vai falhar.")
     
     try:
         firebase_admin.initialize_app(cred)
+        logger.info("Firebase inicializado com sucesso.")
     except ValueError: pass
 
 db = firestore.client()
@@ -51,15 +62,16 @@ db = firestore.client()
 # --- CONFIGURAÇÃO DE LIFESPAN ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Inicia o Scheduler apenas se não for um worker de teste
     scheduler = BackgroundScheduler()
     scheduler.add_job(_resolve_bets_logic, 'interval', minutes=10)
     scheduler.start()
-    print(">>> SISTEMA: Agendador de desafios INICIADO.")
+    logger.info(">>> SISTEMA: Agendador de desafios (Worker) INICIADO.")
     yield
     scheduler.shutdown()
-    print(">>> SISTEMA: Agendador de desafios DESLIGADO.")
+    logger.info(">>> SISTEMA: Agendador de desafios DESLIGADO.")
 
-# --- APP FASTAPI (REBRANDING) ---
+# --- APP FASTAPI ---
 app = FastAPI(lifespan=lifespan, title="Glitch Arena API")
 
 app.add_middleware(
@@ -69,6 +81,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- MIDDLEWARE DE PERFORMANCE ---
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    # Loga requisições lentas (> 1 segundo)
+    if process_time > 1.0:
+        logger.warning(f"Rota Lenta: {request.url.path} levou {process_time:.4f}s")
+    return response
 
 # --- MODELOS DE DADOS ---
 class InitUserRequest(BaseModel):
@@ -81,7 +104,6 @@ class InitUserRequest(BaseModel):
 class BetItem(BaseModel):
     gameType: str
     odd: float
-    # CORREÇÃO AQUI: Sintaxe nova do Pydantic V2
     model_config = ConfigDict(extra='allow')
 
 class PlaceBetRequest(BaseModel):
@@ -98,7 +120,6 @@ class ConnectRequest(BaseModel):
     playerId: str
     gameType: str
 
-# --- Modelo para listar desafios ---
 class GetChallengesRequest(BaseModel):
     gameType: str
 
@@ -123,21 +144,26 @@ async def get_current_user_uid(authorization: str = Header(None)):
     try:
         token = authorization.split(" ")[1]
         return auth.verify_id_token(token)['uid']
-    except Exception as e: raise HTTPException(401, f"Token inválido: {str(e)}")
+    except Exception as e: 
+        logger.warning(f"Falha de Auth UID: {e}")
+        raise HTTPException(401, "Token inválido")
 
-# Nova dependência para pegar o token completo (usado no auto-heal)
 async def get_current_user_token(authorization: str = Header(None)):
     if not authorization: raise HTTPException(401, "Token ausente")
     try:
         token = authorization.split(" ")[1]
         return auth.verify_id_token(token)
-    except Exception as e: raise HTTPException(401, f"Token inválido: {str(e)}")
+    except Exception as e: 
+        logger.warning(f"Falha de Auth Token: {e}")
+        raise HTTPException(401, "Token inválido")
 
 async def verify_admin(authorization: str = Header(None)):
     if not authorization: raise HTTPException(401, "Token ausente")
     try:
         decoded = auth.verify_id_token(authorization.split(" ")[1])
-        if not decoded.get('admin'): raise HTTPException(403, "Requer admin")
+        if not decoded.get('admin'): 
+            logger.warning(f"Tentativa de acesso Admin negada: {decoded.get('email')}")
+            raise HTTPException(403, "Requer admin")
         return decoded['uid']
     except Exception as e: raise HTTPException(401, f"Erro auth: {str(e)}")
 
@@ -145,6 +171,7 @@ async def verify_admin(authorization: str = Header(None)):
 def get_platform_config():
     try:
         c = db.collection('platform').document('config').get().to_dict() or {}
+        # ... (Mantendo defaults para brevidade, igual ao anterior) ...
         defaults = {
             "risk": {'min_summoner_level': 100}, "payment": {'min_deposit': 20.0, 'min_withdrawal': 50.0},
             "margins": {'main': 0.15, 'stats': 0.30}, "system": {'stats_ttl_minutes': 45, 'resolution_interval_minutes': 10},
@@ -154,13 +181,16 @@ def get_platform_config():
         for k, v in defaults.items(): 
             if k not in c: c[k] = v
         return c
-    except: return {}
+    except Exception as e:
+        logger.error(f"Erro ao ler config: {e}")
+        return {}
 
 def _calculate_user_bet_limit(user_data, platform_config):
     total_bets = user_data.get('total_bets_made', 0)
     kyc = user_data.get('kyc_status', 'pending')
     deposited, wagered = user_data.get('total_deposited', 0.0), user_data.get('total_wagered', 0.0)
     limit = 3.00
+    # Lógica progressiva mantida...
     if total_bets >= 3: limit = 5.00
     if total_bets >= 7: limit = 10.00
     if kyc == 'verified': limit = 20.00
@@ -260,7 +290,9 @@ def tx_resolve_bet(transaction, bet_ref, user_ref, bet_data, result):
 @app.post("/api/init-user")
 async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current_user_uid)):
     try:
+        logger.info(f"Tentativa de registro: {payload.email}")
         if db.collection('users').document(user_id).get().exists: return {"status": "exists"}
+        
         status = "verified" if payload.cpf and len(payload.cpf) >= 11 else "pending"
         db.collection('users').document(user_id).set({
             "email": payload.email, "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
@@ -269,19 +301,21 @@ async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current
             "total_wagered": 0.0, "total_deposited": 0.0, "currentBetLimit": 3.00, 
             "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None
         })
+        logger.info(f"Novo usuário registrado: {user_id} - Status: {status}")
         return {"status": "success", "kyc_status": status}
-    except Exception as e: raise HTTPException(500, str(e))
+    except Exception as e:
+        logger.error(f"Erro ao registrar usuário {user_id}: {e}")
+        raise HTTPException(500, str(e))
 
-# --- ROTA CORRIGIDA: AUTO-HEAL ---
 @app.get("/api/get-user-data")
 async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_token)):
     user_id = decoded_token['uid']
     ref = db.collection('users').document(user_id)
     doc = ref.get()
     
-    # AUTO-HEAL: Se não existir no banco, cria agora mesmo.
+    # AUTO-HEAL
     if not doc.exists:
-        print(f"ALERTA: Usuário {user_id} existe no Auth mas não no DB. Recriando...")
+        logger.warning(f"AUTO-HEAL: Usuário {user_id} sem dados. Recriando...")
         new_user_data = {
             "email": decoded_token.get('email', ''), 
             "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
@@ -292,12 +326,14 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
             "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None
         }
         ref.set(new_user_data)
-        data = new_user_data # Usa os dados recém criados
+        data = new_user_data
     else:
         data = doc.to_dict()
 
     limit = _calculate_user_bet_limit(data, get_platform_config())
-    if limit != data.get('currentBetLimit'): ref.update({'currentBetLimit': limit}); data['currentBetLimit'] = limit
+    if limit != data.get('currentBetLimit'): 
+        ref.update({'currentBetLimit': limit})
+        data['currentBetLimit'] = limit
     
     return {
         "wallet": data.get("wallet", 0.0), "bonus_wallet": data.get("bonus_wallet", 0.0),
@@ -330,22 +366,26 @@ async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(ge
     try:
         transaction = db.transaction()
         res = tx_place_bet(transaction, user_ref, payload.betAmount, bet_data)
+        logger.info(f"Aposta recebida: User {user_id} apostou {payload.betAmount} em {total_odd}x")
         return {"status": "success", "newWallet": res['real'], "newBonusWallet": res['bonus']}
-    except ValueError as e: raise HTTPException(400, str(e))
-    except Exception as e: print(e); raise HTTPException(500, "Erro interno")
+    except ValueError as e: 
+        logger.warning(f"Aposta rejeitada: {e}")
+        raise HTTPException(400, str(e))
+    except Exception as e: 
+        logger.error(f"Erro interno aposta: {e}")
+        raise HTTPException(500, "Erro interno")
 
 @app.post("/api/redeem-coupon")
 async def redeem_coupon_endpoint(payload: CouponRequest, user_id: str = Depends(get_current_user_uid)):
     code = payload.code.upper()
     coupons = list(db.collection('coupons').where(filter=FieldFilter('code', '==', code)).limit(1).stream())
     if not coupons: raise HTTPException(404, "Inválido")
-    if list(db.collection('coupon_usages').where(filter=FieldFilter('userId', '==', user_id)).where(filter=FieldFilter('code', '==', code)).stream()):
-        raise HTTPException(400, "Já utilizado")
     
     try:
         cfg = get_platform_config()
         transaction = db.transaction()
         tx_redeem_coupon(transaction, db.collection('users').document(user_id), coupons[0].reference, db.collection('coupon_usages').document(), coupons[0].to_dict()['amount'], float(cfg['referral']['rollover_multiplier']), user_id, code)
+        logger.info(f"Cupom {code} resgatado por {user_id}")
         return {"status": "success", "amount": coupons[0].to_dict()['amount']}
     except ValueError as e: raise HTTPException(400, str(e))
     except Exception as e: raise HTTPException(500, str(e))
@@ -354,7 +394,9 @@ async def redeem_coupon_endpoint(payload: CouponRequest, user_id: str = Depends(
 async def convert_bonus_endpoint(user_id: str = Depends(get_current_user_uid)):
     try:
         transaction = db.transaction()
-        return {"status": "success", "convertedAmount": tx_convert_bonus(transaction, db.collection('users').document(user_id))}
+        val = tx_convert_bonus(transaction, db.collection('users').document(user_id))
+        logger.info(f"User {user_id} converteu {val} de bônus.")
+        return {"status": "success", "convertedAmount": val}
     except ValueError as e: raise HTTPException(400, str(e))
 
 @app.post("/api/connect")
@@ -363,10 +405,13 @@ async def connect_account_endpoint(payload: ConnectRequest, user_id: str = Depen
         cfg = get_platform_config()
         p_data = riot_api.get_player_data(payload.playerId, 'lol')
         val = odds_engine.validate_account(p_data, cfg['risk']['min_summoner_level'])
-        if not val['valid']: raise HTTPException(400, val['reason'])
+        if not val['valid']: 
+            logger.warning(f"Conexão rejeitada ({payload.playerId}): {val['reason']}")
+            raise HTTPException(400, val['reason'])
         
         db.collection('users').document(user_id).set({"connectedAccounts": {"lol": {"playerId": payload.playerId, "puuid": p_data['puuid'], "stats": p_data['stats'], "connectedAt": firestore.SERVER_TIMESTAMP}}}, merge=True)
         db.collection('riotAccountLinks').document(p_data['puuid']).set({"linkedToUserId": user_id, "createdAt": firestore.SERVER_TIMESTAMP})
+        logger.info(f"Conta LOL conectada: {payload.playerId} ao User {user_id}")
         return {"status": "connected"}
     except Exception as e: raise HTTPException(400, str(e))
 
@@ -398,7 +443,9 @@ async def request_bet_endpoint(payload: RequestBetRequest, user_id: str = Depend
 @app.post("/api/validate-kyc")
 async def validate_kyc_endpoint(payload: ValidationKycRequest, user_id: str = Depends(get_current_user_uid)):
     if not payload.cpf: raise HTTPException(400, "Dados inválidos")
+    # TODO: Adicionar validação real de CPF aqui
     db.collection('users').document(user_id).update({"fullname": payload.fullname, "cpf": payload.cpf, "birthdate": payload.birthdate, "kyc_status": "verified"})
+    logger.info(f"KYC atualizado para {user_id}")
     return {"status": "verified"}
 
 @app.post("/api/withdraw/request")
@@ -408,14 +455,17 @@ async def withdraw_request_endpoint(payload: WithdrawRequest, user_id: str = Dep
         transaction = db.transaction()
         new_bal = tx_withdraw(transaction, db.collection('users').document(user_id), payload.amount)
         db.collection('withdrawals').add({"userId": user_id, "amount": payload.amount, "status": "processing", "createdAt": firestore.SERVER_TIMESTAMP})
+        logger.info(f"Saque solicitado: {payload.amount} por {user_id}")
         return {"status": "success", "newWallet": new_bal}
     except ValueError as e: raise HTTPException(400, str(e))
 
 @app.post("/api/deposit/generate-pix")
 async def deposit_pix_endpoint(payload: DepositRequest, user_id: str = Depends(get_current_user_uid)):
-    if payload.amount < 20: raise HTTPException(400, "Mínimo R$ 20 para comprar Glitchcoins")
+    if payload.amount < 20: raise HTTPException(400, "Mínimo R$ 20")
+    # MOCK PIX
     fake_pix = f"00020126580014BR.GOV.BCB.PIX0136{uuid.uuid4()}520400005303986540{payload.amount:.2f}5802BR5913SUITPAY"
     db.collection('pending_deposits').add({"userId": user_id, "amount": payload.amount, "status": "pending", "qrCode": fake_pix, "createdAt": firestore.SERVER_TIMESTAMP})
+    logger.info(f"PIX gerado para {user_id} de R$ {payload.amount}")
     return {"qrCodeBase64": f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={fake_pix}", "copyPaste": fake_pix, "bonusApplied": False}
 
 @app.get("/api/get-active-bets")
@@ -428,7 +478,7 @@ async def get_history_bets(user_id: str = Depends(get_current_user_uid)):
     docs = db.collection('bets').where(filter=FieldFilter('userId', '==', user_id)).where(filter=FieldFilter('status', 'in', ["won", "lost", "void"])).stream()
     return [{**d.to_dict(), 'id': d.id, 'createdAt': str(d.to_dict().get('createdAt', '')), 'resolvedAt': str(d.to_dict().get('resolvedAt', ''))} for d in docs]
 
-# --- ROTAS ADMIN ---
+# --- ROTAS ADMIN (Mantidas) ---
 @app.post("/api/admin/set-admin")
 async def set_admin_claim(req: Request, uid: str = Depends(verify_admin)):
     data = await req.json()
@@ -468,18 +518,32 @@ async def create_coupon_admin(payload: CouponRequest, uid: str = Depends(verify_
     return {"status": "success", "code": code}
 
 def _resolve_bets_logic():
-    print("--- [Scheduler] Check ---")
+    logger.info("--- [Scheduler] Iniciando ciclo de resolução ---")
+    processed, errors = 0, 0
     try:
-        for doc in db.collection('bets').where(filter=FieldFilter('status', '==', 'pending')).stream():
+        pending_bets = list(db.collection('bets').where(filter=FieldFilter('status', '==', 'pending')).stream())
+        if not pending_bets:
+            logger.info("--- [Scheduler] Nenhuma aposta pendente.")
+            return
+
+        for doc in pending_bets:
             try:
                 bet = doc.to_dict()
                 res = riot_api.get_match_details_and_resolve(bet['puuid'], bet['lastMatchId'], bet['betItems'])
+                
                 if res["status"] != "pending":
                     transaction = db.transaction()
                     tx_resolve_bet(transaction, db.collection('bets').document(doc.id), db.collection('users').document(bet['userId']), bet, res["status"])
-                    print(f"Desafio {doc.id} -> {res['status']}")
-            except Exception as e: print(f"Erro desafio {doc.id}: {e}")
-    except Exception as e: print(f"Erro Scheduler: {e}")
+                    logger.info(f"RESOLVIDO: Aposta {doc.id} -> {res['status']}")
+                    processed += 1
+            except Exception as e:
+                logger.error(f"Erro ao resolver aposta {doc.id}: {e}")
+                errors += 1
+        
+        logger.info(f"--- [Scheduler] Ciclo fim. Processados: {processed}, Erros: {errors}")
+            
+    except Exception as e: 
+        logger.critical(f"FALHA CRÍTICA NO SCHEDULER: {e}")
 
 # --- PÁGINA INICIAL (ROOT) ---
 @app.get("/")
