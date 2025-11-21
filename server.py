@@ -440,9 +440,7 @@ async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(ge
     if payload.betAmount <= 0 or not payload.betItems: raise HTTPException(400, "Inválido")
     user_ref = db.collection('users').document(user_id)
     user_data = user_ref.get().to_dict()
-    
     if payload.betAmount > user_data.get('currentBetLimit', 3.00): raise HTTPException(400, "Limite excedido")
-    
     acct = user_data.get("connectedAccounts", {}).get(payload.betItems[0].get('gameType'))
     if not acct: raise HTTPException(400, "Conta não conectada")
     
@@ -453,18 +451,13 @@ async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(ge
         "betItems": payload.betItems, "status": "pending", "createdAt": firestore.SERVER_TIMESTAMP,
         "lastMatchId": riot_api.get_last_match_id(acct.get("puuid"), "lol")
     }
-    
     try:
         transaction = db.transaction()
         res = tx_place_bet(transaction, user_ref, payload.betAmount, bet_data)
-        logger.info(f"Aposta Aceita: User {user_id} | Valor: {payload.betAmount} | Odd: {total_odd}x")
+        logger.info(f"Aposta: {user_id} | {payload.betAmount} em {total_odd}x")
         return {"status": "success", "newWallet": res['real'], "newBonusWallet": res['bonus']}
-    except ValueError as e: 
-        logger.warning(f"Aposta Recusada: {e}")
-        raise HTTPException(400, str(e))
-    except Exception as e: 
-        logger.error(f"Erro Interno Aposta: {e}")
-        raise HTTPException(500, "Erro interno")
+    except ValueError as e: raise HTTPException(400, str(e))
+    except Exception as e: logger.error(f"Erro aposta: {e}"); raise HTTPException(500, "Erro interno")
 
 # --- ROTA MODIFICADA: GET CHALLENGES (Passa Configs Matemáticas) ---
 @app.post("/api/get-challenges")
@@ -495,7 +488,6 @@ async def request_bet_endpoint(payload: RequestBetRequest, user_id: str = Depend
 async def withdraw_request_endpoint(payload: WithdrawRequest, user_id: str = Depends(get_current_user_uid)):
     cfg = get_platform_config()
     min_w = float(cfg.get('payment', {}).get('min_withdrawal', 50.0))
-    
     if payload.amount < min_w: raise HTTPException(400, f"Mínimo {min_w} GC")
     
     try:
@@ -579,7 +571,6 @@ async def deposit_pix_endpoint(payload: DepositRequest, user_id: str = Depends(g
     if payload.amount < 20: raise HTTPException(400, "Mínimo R$ 20")
     fake_pix = f"00020126580014BR.GOV.BCB.PIX0136{uuid.uuid4()}520400005303986540{payload.amount:.2f}5802BR5913SUITPAY"
     db.collection('pending_deposits').add({"userId": user_id, "amount": payload.amount, "status": "pending", "qrCode": fake_pix, "createdAt": firestore.SERVER_TIMESTAMP})
-    logger.info(f"Pix Gerado: {user_id} - R$ {payload.amount}")
     return {"qrCodeBase64": f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={fake_pix}", "copyPaste": fake_pix, "bonusApplied": False}
 
 @app.get("/api/get-active-bets")
@@ -592,7 +583,7 @@ async def get_history_bets(user_id: str = Depends(get_current_user_uid)):
     docs = db.collection('bets').where(filter=FieldFilter('userId', '==', user_id)).where(filter=FieldFilter('status', 'in', ["won", "lost", "void"])).stream()
     return [{**d.to_dict(), 'id': d.id, 'createdAt': str(d.to_dict().get('createdAt', '')), 'resolvedAt': str(d.to_dict().get('resolvedAt', ''))} for d in docs]
 
-# --- ROTAS ADMIN ---
+# --- ADMIN ROUTES (COM DIAGNÓSTICO NA BUSCA) ---
 @app.post("/api/admin/set-admin")
 async def set_admin_claim(req: Request, uid: str = Depends(verify_admin)):
     data = await req.json()
@@ -611,14 +602,34 @@ async def get_config_route(uid: str = Depends(verify_admin)): return get_platfor
 @app.post("/api/admin/set-config")
 async def set_config_route(req: Request, uid: str = Depends(verify_admin)):
     db.collection('platform').document('config').set(await req.json())
-    logger.info("Configurações de Admin atualizadas")
+    logger.info("Admin atualizou configurações")
     return {"status": "sucesso"}
 
 @app.get("/api/admin/find-user")
 async def find_user(email: str, uid: str = Depends(verify_admin)):
     users = list(db.collection('users').where(filter=FieldFilter('email', '==', email)).limit(1).stream())
     if not users: raise HTTPException(404, "Não encontrado")
-    return {**users[0].to_dict(), 'userId': users[0].id}
+    
+    user_data = users[0].to_dict()
+    
+    # --- GERAÇÃO DE RELATÓRIO DE DIAGNÓSTICO (LOGS) ---
+    # Só gera se tiver conta conectada
+    lol_acct = user_data.get("connectedAccounts", {}).get("lol")
+    if lol_acct:
+        try:
+            cfg = get_platform_config()
+            # Chama a nova função do prime_engine para análise pura
+            analytics = odds_engine.get_player_analytics(lol_acct, cfg.get("math", {}))
+            
+            # Imprime relatório bonito no console do Railway
+            logger.info(f"================ ANALYTICS DO JOGADOR: {email} ================")
+            for key, val in analytics.items():
+                logger.info(f"   > {key}: {val}")
+            logger.info("================================================================")
+        except Exception as e:
+            logger.error(f"Erro ao gerar analytics para {email}: {e}")
+            
+    return {**user_data, 'userId': users[0].id}
 
 @app.get("/api/admin/resolve-bets")
 async def admin_resolve_bets(uid: str = Depends(verify_admin)):
@@ -634,41 +645,22 @@ async def create_coupon_admin(payload: CouponRequest, uid: str = Depends(verify_
     return {"status": "success", "code": code}
 
 def _resolve_bets_logic():
-    logger.info("--- [Scheduler] Iniciando ciclo de resolução ---")
-    processed, errors = 0, 0
+    logger.info("--- [Scheduler] Iniciando ciclo ---")
     try:
-        pending_bets = list(db.collection('bets').where(filter=FieldFilter('status', '==', 'pending')).stream())
-        if not pending_bets:
-            logger.info("--- [Scheduler] Nenhuma aposta pendente.")
-            return
-
-        for doc in pending_bets:
+        for doc in db.collection('bets').where(filter=FieldFilter('status', '==', 'pending')).stream():
             try:
                 bet = doc.to_dict()
                 res = riot_api.get_match_details_and_resolve(bet['puuid'], bet['lastMatchId'], bet['betItems'])
-                
                 if res["status"] != "pending":
                     transaction = db.transaction()
                     tx_resolve_bet(transaction, db.collection('bets').document(doc.id), db.collection('users').document(bet['userId']), bet, res["status"])
-                    logger.info(f"RESOLVIDO: Aposta {doc.id} -> {res['status']}")
-                    processed += 1
-            except Exception as e:
-                logger.error(f"Erro ao resolver aposta {doc.id}: {e}")
-                errors += 1
-        
-        logger.info(f"--- [Scheduler] Ciclo fim. Processados: {processed}, Erros: {errors}")
-            
-    except Exception as e: 
-        logger.critical(f"FALHA CRÍTICA NO SCHEDULER: {e}")
+                    logger.info(f"RESOLVIDO: {doc.id} -> {res['status']}")
+            except Exception as e: logger.error(f"Erro desafio {doc.id}: {e}")
+    except Exception as e: logger.critical(f"FALHA SCHEDULER: {e}")
 
-# --- PÁGINA INICIAL (ROOT) ---
+# --- PÁGINA INICIAL ---
 @app.get("/")
-async def serve_spa():
-    return FileResponse("mvp_demo.html")
-
+async def serve_spa(): return FileResponse("mvp_demo.html")
 @app.get("/admin-panel")
-async def serve_admin():
-    return FileResponse("admin.html")
-
-# --- STATIC FILES ---
+async def serve_admin(): return FileResponse("admin.html")
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
