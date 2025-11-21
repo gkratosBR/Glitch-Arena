@@ -37,6 +37,7 @@ const appState = {
     myReferralCode: ''
 };
 
+// --- API HELPER ---
 async function fetchWithAuth(endpoint, options = {}) {
     if (!appState.currentUser) {
         const user = auth.currentUser;
@@ -54,7 +55,7 @@ async function fetchWithAuth(endpoint, options = {}) {
             idToken = await appState.currentUser.getIdToken(true);
             options.headers['Authorization'] = `Bearer ${idToken}`;
             response = await fetch(`${API_URL}${endpoint}`, options);
-        } catch (e) { throw new Error("Sessão expirada. Faça login novamente."); }
+        } catch (e) { throw new Error("Sessão expirada."); }
     }
 
     if (!response.ok) {
@@ -68,23 +69,24 @@ async function fetchWithAuth(endpoint, options = {}) {
     return response.json();
 }
 
+// --- INICIALIZAÇÃO (CLEAN) ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log(">>> App v3.0 Iniciando (Clean Slate)...");
     initializeMainApp();
     setupAuthListeners();
     setupAppListeners();
 });
 
-// --- INICIALIZAÇÃO (LOGS [SYSTEM] PARA CONFIRMAR VERSÃO) ---
 function initializeMainApp() {
-    console.log(">>> [System] Inicializando App v2.3...");
     onAuthStateChanged(auth, async (user) => {
         if (appState.isRegistering) return;
         
         if (user) {
-            console.log(">>> [System] Usuário detectado:", user.uid);
+            console.log(">>> Usuário Logado:", user.uid);
             appState.currentUser = user;
             try {
                 const data = await fetchWithAuth('/api/get-user-data');
+                
                 Object.assign(appState, {
                     wallet: data.wallet || 0,
                     bonus_wallet: data.bonus_wallet || 0,
@@ -102,133 +104,152 @@ function initializeMainApp() {
                 
                 updateWalletUI();
                 updateProfileUI();
-                showApp();
+                
+                // Mostra o App Shell
+                toggleShells('app');
+                navigateApp('home-page');
             } catch (e) {
-                console.error(">>> [System] Erro init:", e);
+                console.error(">>> Erro Init:", e);
                 await signOut(auth);
-                showAuth();
-                if (!e.message.includes("404")) {
-                    showMessage("Erro de conexão. Reconectando...", 'error');
-                }
+                toggleShells('auth');
+                showMessage("Erro de conexão. Tente novamente.", 'error');
             }
         } else {
-            console.log(">>> [System] Sem sessão. Mostrando Login.");
+            console.log(">>> Sem Usuário. Mostrando Login.");
             appState.currentUser = null;
-            showAuth();
+            toggleShells('auth');
+            navigateAuth('landing-page');
         }
     });
 }
 
-// --- NAVEGAÇÃO BLINDADA ---
+// --- GERENCIAMENTO DE TELAS (LÓGICA CORRETA) ---
+
+function toggleShells(mode) {
+    const loading = document.getElementById('loading-shell');
+    const authShell = document.getElementById('auth-shell');
+    const appShell = document.getElementById('app-shell');
+
+    // 1. Remove Loader
+    loading.classList.add('hidden');
+
+    if (mode === 'app') {
+        // Esconde Auth (remove display:flex, add hidden)
+        authShell.classList.remove('flex');
+        authShell.classList.add('hidden');
+        
+        // Mostra App (remove hidden, add display:block)
+        appShell.classList.remove('hidden');
+        appShell.classList.add('block');
+    } else {
+        // Mostra Auth (remove hidden, add display:flex para centralizar)
+        authShell.classList.remove('hidden');
+        authShell.classList.add('flex');
+        
+        // Esconde App
+        appShell.classList.remove('block');
+        appShell.classList.add('hidden');
+    }
+}
 
 function navigateAuth(pageId) {
-    document.querySelectorAll('.page').forEach(p => {
-        p.classList.remove('active');
-        p.style.display = ''; 
-    });
+    // Esconde todas as páginas de Auth
+    document.querySelectorAll('#auth-shell .page').forEach(p => p.classList.remove('active'));
+    
+    // Mostra a desejada
     const target = document.getElementById(pageId);
-    if(target) {
-        target.classList.add('active');
-    }
+    if (target) target.classList.add('active');
+    
     appState.currentAuthPage = pageId;
 }
 
 function navigateApp(pageId) {
     if (appState.currentAppPage === pageId) return;
-    
+
+    // Remove active da atual
     if (appState.currentAppPage) {
         const curr = document.getElementById(appState.currentAppPage);
-        if(curr) curr.classList.remove('active');
+        if (curr) curr.classList.remove('active');
     }
-    
+
+    // Adiciona active na nova e garante que não esteja hidden
     const target = document.getElementById(pageId);
-    if(target) {
-        target.classList.add('active');
-        // REMOVE HIDDEN do Tailwind se existir na página específica
-        target.classList.remove('hidden'); 
+    if (target) {
+        target.classList.remove('hidden'); // Remove a classe do Tailwind se existir
+        target.classList.add('active');    // Ativa a animação do CSS
     }
-    
+
     appState.currentAppPage = pageId;
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === pageId));
-    
+
+    // Atualiza Barra de Navegação
+    document.querySelectorAll('.nav-item').forEach(i => {
+        i.classList.toggle('active', i.dataset.page === pageId);
+    });
+
+    // Hooks de Página
     if (pageId === 'home-page') appState.currentGame = null;
     if (pageId === 'profile-page') updateProfileUI();
     if (pageId === 'bets-page') fetchAndRenderActiveBets();
     if (pageId === 'history-page') fetchAndRenderHistoryBets();
 }
 
-// --- GERENCIAMENTO DE TELAS (O CORAÇÃO DO FIX) ---
+// --- UI HELPERS ---
 
-function toggleShells(isApp) {
-    const loading = document.getElementById('loading-shell');
-    const authShell = document.getElementById('auth-shell');
-    const appShell = document.getElementById('app-shell');
-
-    // Esconde Loading
-    if(loading) loading.classList.add('hidden');
-
-    if (isApp) {
-        // Esconde Auth
-        if(authShell) {
-            authShell.classList.add('hidden');
-            authShell.classList.remove('flex'); 
-        }
-        // Mostra App
-        if(appShell) {
-            console.log(">>> [System] Revelando App Shell (Removendo .hidden)");
-            appShell.classList.remove('hidden'); // ESSENCIAL: Remove a classe do Tailwind
-            appShell.style.display = 'block'; // Força display
-            setTimeout(() => appShell.style.opacity = '1', 50);
-        }
-    } else {
-        // Mostra Auth
-        if(authShell) {
-            authShell.classList.remove('hidden');
-            authShell.style.display = 'flex';
-        }
-        // Esconde App
-        if(appShell) {
-            appShell.classList.add('hidden');
-            appShell.style.display = 'none';
-        }
+function toggleModal(id, show) {
+    const el = document.getElementById(id);
+    const back = document.getElementById('modal-backdrop');
+    if (show) { 
+        el.classList.remove('hidden'); 
+        if(back) back.classList.remove('hidden'); 
+    } else { 
+        el.classList.add('hidden'); 
+        if(back) back.classList.add('hidden'); 
     }
 }
 
-function showApp() { 
-    toggleShells(true); 
-    appState.currentAppPage = null; 
-    navigateApp('home-page');
-    
-    // Verificação final de segurança para forçar exibição
-    setTimeout(() => {
-        const home = document.getElementById('home-page');
-        if(home && getComputedStyle(home).display === 'none') {
-            console.warn(">>> [System] Forçando visibilidade da Home via JS");
-            home.style.display = 'block';
-            home.style.opacity = '1';
-        }
-    }, 200);
+function toggleLoading(prefix, show) {
+    const loader = document.getElementById(`${prefix}-loader`);
+    const text = document.getElementById(`${prefix}-btn-text`);
+    if (show) { loader?.classList.remove('hidden'); text?.classList.add('hidden'); }
+    else { loader?.classList.add('hidden'); text?.classList.remove('hidden'); }
 }
 
-function showAuth() { 
-    toggleShells(false); 
-    navigateAuth('landing-page'); 
+function toggleError(prefix, msg) {
+    const el = document.getElementById(`${prefix}-error-msg`);
+    if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+    else el.classList.add('hidden');
 }
 
-// --- LISTENERS E UI (Mantidos) ---
+function showRegisterError(msg) { toggleError('register', msg); }
+
+function showMessage(msg, type) {
+    const m = document.getElementById('message-modal');
+    const c = document.getElementById('message-modal-content');
+    c.textContent = msg;
+    c.className = `px-6 py-3 rounded-full shadow-2xl font-bold text-sm ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+    m.classList.remove('hidden');
+    setTimeout(() => m.classList.add('hidden'), 3000);
+}
+
+function showError(msg) { showMessage(msg, 'error'); }
+
+// --- LISTENERS ---
 
 function setupAuthListeners() {
     const ids = ['auth-login-btn', 'register-goto-login', 'auth-register-btn', 'landing-cta-btn', 'login-goto-register'];
-    ids.forEach(id => document.getElementById(id)?.addEventListener('click', () => navigateAuth(id.includes('login') ? 'login-page' : 'register-page')));
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('click', () => navigateAuth(id.includes('login') ? 'login-page' : 'register-page'));
+    });
 
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('reg-submit').addEventListener('click', handleRegister); 
     document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
 
-    document.getElementById('open-terms-btn').addEventListener('click', () => navigateAuth('terms-page'));
-    const closeTerms = () => navigateAuth('register-page');
-    document.getElementById('close-terms-btn').addEventListener('click', closeTerms);
-    document.getElementById('terms-ok-btn').addEventListener('click', closeTerms);
+    // Termos
+    document.getElementById('open-terms-btn').addEventListener('click', () => toggleModal('terms-page', true));
+    document.getElementById('close-terms-btn').addEventListener('click', () => toggleModal('terms-page', false));
+    document.getElementById('terms-ok-btn').addEventListener('click', () => toggleModal('terms-page', false));
     
     setupRegistrationSteps();
 }
@@ -247,8 +268,8 @@ function setupAppListeners() {
 
     document.getElementById('back-to-home').addEventListener('click', () => navigateApp('home-page'));
     
+    // Connect
     document.querySelectorAll('.connect-btn').forEach(btn => btn.addEventListener('click', (e) => openConnectModal(e.target.dataset.game)));
-    
     document.getElementById('connect-modal-cancel').addEventListener('click', () => toggleModal('connect-modal', false));
     document.getElementById('connect-modal-submit').addEventListener('click', handleSubmitConnection);
     document.getElementById('connect-terms-check').addEventListener('change', (e) => {
@@ -257,45 +278,49 @@ function setupAppListeners() {
         btn.classList.toggle('opacity-50', !e.target.checked);
     });
 
+    // Bets
     document.getElementById('bet-slip-fab').addEventListener('click', openBetSlipModal);
     document.getElementById('bet-slip-modal-close').addEventListener('click', () => toggleModal('bet-slip-modal', false));
     document.getElementById('bet-amount-input').addEventListener('input', updateBetSlipSummary);
     document.getElementById('place-bet-btn').addEventListener('click', handlePlaceBet);
 
+    // Request Bet
     document.getElementById('open-request-bet-modal').addEventListener('click', openRequestBetModal);
     document.getElementById('request-modal-cancel').addEventListener('click', () => toggleModal('request-bet-modal', false));
     document.getElementById('request-modal-submit').addEventListener('click', handleRequestBet);
     document.getElementById('request-add-to-slip').addEventListener('click', handleAddCustomBetToSlip);
     document.getElementById('request-try-again').addEventListener('click', resetRequestModal);
 
+    // KYC
     document.getElementById('kyc-form').addEventListener('submit', handleKycSubmit);
     document.getElementById('kyc-modal-cancel').addEventListener('click', () => toggleModal('kyc-modal', false));
 
+    // Deposit
     document.getElementById('open-deposit-modal').addEventListener('click', openDepositModal);
     document.getElementById('deposit-modal-cancel').addEventListener('click', () => toggleModal('deposit-modal', false));
     document.getElementById('deposit-confirm-btn').addEventListener('click', handleGeneratePix);
     document.getElementById('deposit-copy-btn').addEventListener('click', copyPixCode);
     document.getElementById('deposit-finish-btn').addEventListener('click', () => toggleModal('deposit-modal', false));
-    
     document.querySelectorAll('.deposit-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => document.getElementById('deposit-amount').value = e.target.dataset.value);
     });
 
+    // Withdraw
     document.getElementById('open-withdraw-modal').addEventListener('click', openWithdrawModal);
     document.getElementById('withdraw-modal-cancel').addEventListener('click', () => toggleModal('withdraw-modal', false));
     document.getElementById('withdraw-confirm-btn').addEventListener('click', handleRequestWithdraw);
 
+    // Coupon
     document.getElementById('redeem-coupon-btn').addEventListener('click', handleRedeemCoupon);
-    const refCodeEl = document.getElementById('my-referral-code');
-    if(refCodeEl) {
-        refCodeEl.addEventListener('click', () => {
-            if(appState.myReferralCode) {
-                navigator.clipboard.writeText(appState.myReferralCode);
-                showMessage("Código copiado!", 'success');
-            }
-        });
-    }
+    const refEl = document.getElementById('my-referral-code');
+    if(refEl) refEl.addEventListener('click', () => {
+        if(appState.myReferralCode) {
+            navigator.clipboard.writeText(appState.myReferralCode);
+            showMessage("Copiado!", 'success');
+        }
+    });
 
+    // Convert
     document.getElementById('convert-bonus-btn').addEventListener('click', handleConvertBonus);
 }
 
@@ -305,23 +330,23 @@ function setupRegistrationSteps() {
     const check = document.getElementById('reg-terms');
     const submit = document.getElementById('reg-submit');
 
-    next1.addEventListener('click', () => {
+    if(next1) next1.addEventListener('click', () => {
         const p1 = document.getElementById('reg-password').value;
         const p2 = document.getElementById('reg-confirm-password').value;
-        if (p1 !== p2 || p1.length < 6) return showRegisterError(p1 !== p2 ? "Senhas não coincidem." : "Mínimo 6 caracteres.");
+        if (p1 !== p2 || p1.length < 6) return showRegisterError("Senhas inválidas ou curtas.");
         showRegisterError(null); 
         goToRegisterStep(2);
     });
 
-    next2.addEventListener('click', () => {
+    if(next2) next2.addEventListener('click', () => {
         if (!document.getElementById('reg-fullname').value || !document.getElementById('reg-cpf').value || !document.getElementById('reg-birthdate').value) {
-            return showRegisterError("Preencha todos os campos.");
+            return showRegisterError("Preencha tudo.");
         }
         showRegisterError(null); 
         goToRegisterStep(3);
     });
 
-    check.addEventListener('change', () => {
+    if(check) check.addEventListener('change', () => {
         submit.disabled = !check.checked;
         submit.classList.toggle('opacity-50', !check.checked);
     });
@@ -329,20 +354,18 @@ function setupRegistrationSteps() {
 
 function goToRegisterStep(step) {
     document.querySelectorAll('.register-step').forEach(s => s.classList.add('hidden'));
-    const currentStepEl = document.getElementById(`register-step-${step}`);
-    if (currentStepEl) currentStepEl.classList.remove('hidden');
+    const stepEl = document.getElementById(`register-step-${step}`);
+    if (stepEl) stepEl.classList.remove('hidden');
 
-    const indicators = [1, 2, 3];
-    indicators.forEach(i => {
+    [1, 2, 3].forEach(i => {
         const el = document.getElementById(`step-ind-${i}`);
         if (el) {
-            el.classList.toggle('text-purple-400', i === step);
-            el.classList.toggle('text-gray-600', i > step);
-            el.classList.toggle('text-green-500', i < step);
-            el.classList.toggle('font-bold', i === step);
+            el.className = i === step ? 'text-purple-400 font-bold text-xs' : 'text-gray-600 text-xs';
         }
     });
 }
+
+// --- AUTH HANDLERS ---
 
 async function handleLogin(e) {
     e.preventDefault();
@@ -351,7 +374,7 @@ async function handleLogin(e) {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
     } catch (error) {
-        toggleError('login', error.code === 'auth/invalid-credential' ? 'Credenciais inválidas.' : 'Erro no login.');
+        toggleError('login', 'Login inválido.');
         toggleLoading('login', false);
     }
 }
@@ -362,10 +385,11 @@ async function handleGoogleLogin() {
         const res = await signInWithPopup(auth, new GoogleAuthProvider());
         if (getAdditionalUserInfo(res).isNewUser) {
             appState.currentUser = res.user;
-            await fetchWithAuth('/api/init-user', { method: 'POST', body: JSON.stringify({ email: res.user.email, fullname: res.user.displayName || '' }) });
+            // Tenta criar, se falhar o backend auto-heal cuida
+            await fetchWithAuth('/api/init-user', { method: 'POST', body: JSON.stringify({ email: res.user.email, fullname: res.user.displayName || '' }) }).catch(console.error);
         }
     } catch (e) {
-        toggleError('login', 'Erro no Google Login.');
+        toggleError('login', 'Erro Google.');
     }
 }
 
@@ -373,7 +397,6 @@ async function handleRegister() {
     appState.isRegistering = true;
     toggleLoading('reg', true);
     const email = document.getElementById('reg-email').value;
-    const referral = document.getElementById('reg-referral').value;
     try {
         await setPersistence(auth, browserLocalPersistence);
         const cred = await createUserWithEmailAndPassword(auth, email, document.getElementById('reg-password').value);
@@ -386,35 +409,27 @@ async function handleRegister() {
                 fullname: document.getElementById('reg-fullname').value,
                 cpf: document.getElementById('reg-cpf').value,
                 birthdate: document.getElementById('reg-birthdate').value,
-                referralCode: referral
+                referralCode: document.getElementById('reg-referral').value
             })
         });
         
-        const data = await fetchWithAuth('/api/get-user-data');
-        Object.assign(appState, { 
-            wallet: data.wallet, bonus_wallet: data.bonus_wallet, rollover_target: data.rollover_target,
-            connectedAccounts: data.connectedAccounts, 
-            kycData: { fullname: data.fullname, cpf: data.cpf, birthdate: data.birthdate, kyc_status: data.kyc_status }, 
-            currentBetLimit: data.currentBetLimit, myReferralCode: data.my_referral_code
-        });
-        
-        showMessage("Cadastro com sucesso!", 'success');
-        showApp();
+        // Force reload para pegar dados limpos
+        location.reload();
     } catch (error) {
-        showRegisterError(error.code === 'auth/email-already-in-use' ? 'E-mail em uso.' : error.message);
+        showRegisterError(error.message);
         if (appState.currentUser) await appState.currentUser.delete().catch(() => {});
         appState.currentUser = null;
         toggleLoading('reg', false);
-    } finally {
         appState.isRegistering = false;
     }
 }
 
 async function handleLogout() {
     await signOut(auth);
-    Object.assign(appState, { wallet: 0, bonus_wallet: 0, rollover_target: 0, connectedAccounts: {}, betSlip: [], currentGame: null, currentBetLimit: 3.00 });
-    showAuth();
+    location.reload(); 
 }
+
+// --- LÓGICA DE NEGÓCIO ---
 
 async function selectGame(gameType) {
     if (gameType !== 'lol') return showMessage("Em breve!", 'info');
@@ -423,7 +438,7 @@ async function selectGame(gameType) {
     navigateApp('challenges-page');
     
     if (appState.connectedAccounts[gameType]) {
-        document.getElementById('challenges-subtitle').textContent = `Desafios para ${appState.connectedAccounts[gameType].playerId}`;
+        document.getElementById('challenges-subtitle').textContent = `Conta: ${appState.connectedAccounts[gameType].playerId}`;
         document.getElementById('request-bet-card').classList.remove('hidden');
         await fetchChallenges(gameType);
     } else {
@@ -440,45 +455,39 @@ async function fetchChallenges(gameType) {
         const challenges = await fetchWithAuth('/api/get-challenges', { method: 'POST', body: JSON.stringify({ gameType }) });
         renderChallenges(challenges);
     } catch (e) {
-        list.innerHTML = `<p class="text-red-400">${e.message}</p>`;
+        list.innerHTML = `<p class="text-red-400 text-center text-sm">${e.message}</p>`;
     }
 }
 
 function renderChallenges(challenges) {
     const list = document.getElementById('challenges-list');
     list.innerHTML = '';
-    if (!challenges?.length) return list.innerHTML = '<p class="text-gray-400">Sem desafios.</p>';
+    if (!challenges?.length) return list.innerHTML = '<p class="text-gray-400 text-center text-sm">Sem desafios disponíveis.</p>';
     
     challenges.forEach(c => {
         const div = document.createElement('div');
         div.className = 'glass-card p-4 flex justify-between items-center mb-2';
-        
         const isSelected = appState.betSlip.some(i => i.id === c.id);
         
         div.innerHTML = `
             <div>
-                <h3 class="text-lg font-semibold text-white">${c.title}</h3>
-                <p class="text-sm text-gray-400">Multiplicador: <span class="font-bold primary-gradient-text">${c.odd.toFixed(2)}x</span></p>
+                <h3 class="font-bold text-white">${c.title}</h3>
+                <p class="text-xs text-gray-400">Mult: <span class="font-bold text-purple-400">${c.odd.toFixed(2)}x</span></p>
             </div>
-            <button class="add-to-slip-btn ${isSelected ? 'bg-green-600' : 'bg-purple-600'} text-white font-bold py-2 px-4 rounded-lg transition-all transform active:scale-95" data-id='${c.id}'>
+            <button class="w-8 h-8 rounded flex items-center justify-center font-bold transition ${isSelected ? 'bg-green-600' : 'bg-purple-600'}" data-id='${c.id}'>
                 ${isSelected ? '✓' : '+'}
             </button>`;
             
-        const btn = div.querySelector('button');
-        btn.onclick = (e) => {
+        div.querySelector('button').onclick = (e) => {
             e.stopPropagation(); 
-            toggleBetSlipItem(c, btn);
+            toggleBetSlipItem(c, e.target);
         };
-        
         list.appendChild(div);
     });
 }
 
 function toggleBetSlipItem(challenge, btnElement) {
-    if (!btnElement) {
-        btnElement = document.querySelector(`button[data-id='${challenge.id}']`);
-    }
-
+    if (!btnElement) btnElement = document.querySelector(`button[data-id='${challenge.id}']`);
     const idx = appState.betSlip.findIndex(i => i.id === challenge.id);
     
     if (idx > -1) {
@@ -490,7 +499,7 @@ function toggleBetSlipItem(challenge, btnElement) {
         }
     } else {
         if (appState.betSlip.some(i => i.gameType === challenge.gameType && i.conflictKey === challenge.conflictKey)) {
-            return showError("Você já tem um desafio desse tipo selecionado.");
+            return showError("Conflito de aposta.");
         }
         appState.betSlip.push(challenge);
         if (btnElement) {
@@ -499,21 +508,20 @@ function toggleBetSlipItem(challenge, btnElement) {
             btnElement.textContent = '✓';
         }
     }
-    
     updateBetSlipUI();
 }
 
+// --- PERFIL & CONEXÃO ---
+
 function openConnectModal(gameType) {
     appState.currentGame = gameType;
-    document.getElementById('connect-modal-title').textContent = `Conectar ${gameType === 'lol' ? 'League of Legends' : ''}`;
+    document.getElementById('connect-modal-title').textContent = `Conectar ${gameType === 'lol' ? 'LoL' : ''}`;
     const acc = appState.connectedAccounts[gameType];
     document.getElementById('riot-id-input').value = acc?.playerId || '';
     toggleModal('connect-modal', true);
     toggleError('connect', null);
     
-    const termCheck = document.getElementById('connect-terms-check');
-    termCheck.checked = false;
-    
+    document.getElementById('connect-terms-check').checked = false;
     const btn = document.getElementById('connect-modal-submit');
     btn.disabled = true;
     btn.classList.add('opacity-50');
@@ -525,7 +533,7 @@ async function handleSubmitConnection() {
     toggleLoading('connect', true);
     try {
         await fetchWithAuth('/api/connect', { method: 'POST', body: JSON.stringify({ playerId: id, gameType: appState.currentGame }) });
-        const userData = await fetchWithAuth('/api/get-user-data'); // Refresh
+        const userData = await fetchWithAuth('/api/get-user-data'); 
         appState.connectedAccounts = userData.connectedAccounts;
         updateProfileUI();
         toggleModal('connect-modal', false);
@@ -547,15 +555,47 @@ async function handleDisconnect(gameType) {
     } catch (e) { showError(e.message); }
 }
 
-function openKycModal() {
-    toggleError('kyc', null);
-    const { fullname, cpf, birthdate } = appState.kycData;
-    document.getElementById('kyc-modal-fullname').value = fullname;
-    document.getElementById('kyc-modal-cpf').value = cpf;
-    document.getElementById('kyc-modal-birthdate').value = birthdate;
-    toggleModal('kyc-modal', true);
+function updateProfileUI() {
+    const acc = appState.connectedAccounts['lol'];
+    const status = document.getElementById('lol-status');
+    const btn = document.getElementById('lol-connect-btn');
+    
+    if (acc) {
+        status.textContent = acc.playerId;
+        status.className = 'text-[10px] text-green-400';
+        btn.textContent = 'Desconectar';
+        btn.className = 'connect-btn text-xs bg-red-900/50 px-3 py-1 rounded hover:bg-red-900 text-white';
+        btn.onclick = () => handleDisconnect('lol');
+    } else {
+        status.textContent = 'Não conectado';
+        status.className = 'text-[10px] text-gray-500';
+        btn.textContent = 'Conectar';
+        btn.className = 'connect-btn text-xs bg-white/10 px-3 py-1 rounded hover:bg-white/20 text-white';
+        btn.onclick = () => openConnectModal('lol');
+    }
+    
+    const { fullname, cpf, kyc_status } = appState.kycData;
+    document.getElementById('kyc-loading').classList.add('hidden');
+    document.getElementById('kyc-content').classList.remove('hidden');
+    document.getElementById('kyc-fullname').textContent = fullname || appState.currentUser.email;
+    document.getElementById('kyc-cpf').textContent = cpf ? `***.***.${cpf.slice(-6, -3)}-**` : 'Pendente';
+    
+    const statusEl = document.getElementById('kyc-status');
+    statusEl.textContent = kyc_status.toUpperCase();
+    statusEl.className = `text-[10px] px-2 rounded py-0.5 font-bold ${kyc_status === 'verified' ? 'bg-green-600' : 'bg-gray-700'}`;
+    
+    const verifyBtn = document.getElementById('kyc-verify-btn');
+    verifyBtn.classList.toggle('hidden', kyc_status === 'verified');
+    verifyBtn.onclick = () => toggleModal('kyc-modal', true);
+
+    const refEl = document.getElementById('my-referral-code');
+    if(refEl) refEl.textContent = appState.myReferralCode || '...';
+
+    updateWalletUI();
+    updateRolloverUI();
 }
 
+// --- KYC ---
 async function handleKycSubmit(e) {
     e.preventDefault();
     const fullname = document.getElementById('kyc-modal-fullname').value;
@@ -578,126 +618,35 @@ async function handleKycSubmit(e) {
     }
 }
 
+// --- CARTEIRA & APOSTAS ---
+
 function updateWalletUI() {
     document.getElementById('wallet-balance').textContent = `GC ${appState.wallet.toFixed(2)}`;
     document.getElementById('bonus-balance').textContent = `GC ${appState.bonus_wallet.toFixed(2)}`;
+    document.getElementById('withdraw-max-balance').textContent = appState.wallet.toFixed(2);
 }
 
-function updateProfileUI() {
-    const acc = appState.connectedAccounts['lol'];
-    const status = document.getElementById('lol-status');
-    const btn = document.getElementById('lol-connect-btn');
-    
-    if (acc) {
-        status.textContent = `Conectado: ${acc.playerId}`;
-        status.className = 'text-sm text-green-400';
-        btn.textContent = 'Desconectar';
-        btn.className = 'connect-btn bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm hover:bg-red-600';
-        btn.onclick = () => handleDisconnect('lol');
-    } else {
-        status.textContent = 'Não conectado';
-        status.className = 'text-sm text-gray-400';
-        btn.textContent = 'Conectar';
-        btn.className = 'connect-btn bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg text-sm hover:bg-gray-600';
-        btn.onclick = () => openConnectModal('lol');
-    }
-    
-    const { fullname, cpf, kyc_status } = appState.kycData;
-    document.getElementById('kyc-loading').classList.add('hidden');
-    document.getElementById('kyc-content').classList.remove('hidden');
-    document.getElementById('kyc-fullname').textContent = fullname || appState.currentUser.email;
-    document.getElementById('kyc-cpf').textContent = cpf ? `***.***.${cpf.slice(-6, -3)}-**` : 'Pendente';
-    
-    const statusEl = document.getElementById('kyc-status');
-    statusEl.textContent = kyc_status.toUpperCase();
-    
-    let statusColor = 'bg-red-500';
-    if(kyc_status === 'verified') statusColor = 'bg-green-500';
-    else if(kyc_status === 'pending') statusColor = 'bg-yellow-500';
-    
-    statusEl.className = `text-white font-bold py-1 px-2 rounded-md text-sm ${statusColor}`;
-    
-    const verifyBtn = document.getElementById('kyc-verify-btn');
-    verifyBtn.classList.toggle('hidden', kyc_status === 'verified');
-    verifyBtn.onclick = openKycModal;
-
-    const refEl = document.getElementById('my-referral-code');
-    if(refEl) refEl.textContent = appState.myReferralCode || '...';
-
-    const rolloverCont = document.getElementById('rollover-container');
+function updateRolloverUI() {
+    const container = document.getElementById('rollover-container');
     if (appState.bonus_wallet > 0 || appState.rollover_target > 0) {
-        rolloverCont.classList.remove('hidden');
-        const target = appState.rollover_target;
-        document.getElementById('rollover-text').textContent = `GC ${target.toFixed(2)} restantes`;
-        
+        container.classList.remove('hidden');
+        document.getElementById('rollover-text').textContent = `GC ${appState.rollover_target.toFixed(2)}`;
         const bar = document.getElementById('rollover-bar');
-        const convBtn = document.getElementById('convert-bonus-btn');
+        const btn = document.getElementById('convert-bonus-btn');
         
-        if (target <= 0.50 && appState.bonus_wallet > 0) {
+        if (appState.rollover_target <= 0.5) {
             bar.style.width = '100%';
-            bar.className = 'bg-green-500 h-2.5 rounded-full';
-            convBtn.disabled = false;
-            convBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            convBtn.classList.add('bg-green-600', 'hover:bg-green-500');
-            convBtn.textContent = "Converter para GC Reais";
+            bar.classList.replace('bg-purple-600', 'bg-green-500');
+            btn.disabled = false;
+            btn.classList.replace('bg-gray-700', 'bg-green-600');
+            btn.textContent = "Resgatar Bônus";
         } else {
-            bar.style.width = target > 0 ? '50%' : '0%'; 
-            bar.className = 'bg-purple-600 h-2.5 rounded-full';
-            convBtn.disabled = true;
-            convBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            convBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
-            convBtn.textContent = "Complete o Desbloqueio";
+            bar.style.width = '50%'; // Simplificado
+            btn.disabled = true;
+            btn.textContent = "Complete o Rollover";
         }
     } else {
-        rolloverCont.classList.add('hidden');
-    }
-}
-
-async function handleConvertBonus() {
-    const btn = document.getElementById('convert-bonus-btn');
-    const originalText = btn.textContent;
-    btn.textContent = "Processando...";
-    btn.disabled = true;
-    
-    try {
-        const res = await fetchWithAuth('/api/convert-bonus', { method: 'POST' });
-        appState.wallet += res.convertedAmount;
-        appState.bonus_wallet = 0;
-        appState.rollover_target = 0;
-        updateWalletUI();
-        updateProfileUI();
-        showMessage(`GC ${res.convertedAmount.toFixed(2)} convertidos com sucesso!`, 'success');
-    } catch (e) {
-        showError(e.message);
-    } finally {
-        btn.textContent = originalText;
-    }
-}
-
-async function handleRedeemCoupon() {
-    const input = document.getElementById('coupon-input');
-    const code = input.value.trim();
-    if(!code) return showError("Digite um código.");
-    
-    const btn = document.getElementById('redeem-coupon-btn');
-    const originalTxt = btn.textContent;
-    btn.textContent = "...";
-    btn.disabled = true;
-
-    try {
-        const res = await fetchWithAuth('/api/redeem-coupon', { method: 'POST', body: JSON.stringify({ code }) });
-        const newData = await fetchWithAuth('/api/get-user-data'); 
-        appState.bonus_wallet = newData.bonus_wallet;
-        appState.rollover_target = newData.rollover_target;
-        updateWalletUI();
-        updateProfileUI();
-        showMessage(`Bônus de GC ${res.amount.toFixed(2)} ativado!`, 'success');
-        input.value = '';
-    } catch (e) {
-        showError(e.message);
-    } finally {
-        btn.textContent = originalTxt;
-        btn.disabled = false;
+        container.classList.add('hidden');
     }
 }
 
@@ -719,12 +668,12 @@ function openBetSlipModal() {
     list.innerHTML = '';
     appState.betSlip.forEach(c => {
         const div = document.createElement('div');
-        div.className = 'bet-slip-item p-3 rounded-lg flex justify-between items-center mb-2 bg-white/5';
-        div.innerHTML = `<div class="flex-1"><p class="text-white font-semibold text-sm">${c.title}</p><p class="text-xs text-gray-400">Mult: ${c.odd.toFixed(2)}x</p></div><button class="text-red-500 font-bold p-2 hover:text-red-400">&times;</button>`;
+        div.className = 'p-3 rounded flex justify-between items-center mb-2 bg-white/5 border border-white/5';
+        div.innerHTML = `<div class="flex-1"><p class="font-bold text-sm">${c.title}</p><p class="text-xs text-gray-400">${c.odd.toFixed(2)}x</p></div><button class="text-red-500 font-bold">&times;</button>`;
         div.querySelector('button').onclick = () => {
             toggleBetSlipItem(c);
-            openBetSlipModal(); 
             if(appState.betSlip.length === 0) toggleModal('bet-slip-modal', false);
+            else openBetSlipModal();
         };
         list.appendChild(div);
     });
@@ -745,10 +694,9 @@ async function handlePlaceBet() {
     if (amount <= 0) return toggleError('bet-slip', "Valor inválido.");
     
     const totalFunds = appState.wallet + appState.bonus_wallet;
-    if (amount > totalFunds) return toggleError('bet-slip', "Glitchcoins insuficientes.");
-    
-    if (amount > appState.currentBetLimit) return toggleError('bet-slip', `Limite excedido (Máx: GC ${appState.currentBetLimit}).`);
-    if (appState.kycData.kyc_status !== 'verified') return showError("KYC Pendente.");
+    if (amount > totalFunds) return toggleError('bet-slip', "Saldo insuficiente.");
+    if (amount > appState.currentBetLimit) return toggleError('bet-slip', `Limite: GC ${appState.currentBetLimit}`);
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide sua identidade.");
 
     toggleLoading('place-bet', true);
     try {
@@ -760,13 +708,11 @@ async function handlePlaceBet() {
         appState.rollover_target = data.rollover_target;
         
         updateWalletUI();
-        updateProfileUI();
-        
+        updateRolloverUI();
         appState.betSlip = [];
         updateBetSlipUI();
-        if(appState.currentGame) selectGame(appState.currentGame);
-        
-        showMessage("Desafio aceito!", 'success');
+        toggleModal('bet-slip-modal', false);
+        showMessage("Aposta confirmada!", 'success');
     } catch (e) {
         toggleError('bet-slip', e.message);
     } finally {
@@ -774,53 +720,13 @@ async function handlePlaceBet() {
     }
 }
 
-async function fetchAndRenderActiveBets() {
-    const list = document.getElementById('active-bets-list');
-    list.innerHTML = '<div class="loader mx-auto"></div>';
-    try {
-        const bets = await fetchWithAuth('/api/get-active-bets');
-        list.innerHTML = bets.length ? bets.map(b => `
-            <div class="glass-card p-4 mb-2">
-                <p class="text-xs text-gray-400">Pendente...</p>
-                <h3 class="text-lg font-semibold text-white">Desafio (${b.betItems.length}x)</h3>
-                <ul class="text-sm text-gray-300 list-disc list-inside my-2">${b.betItems.map(i => `<li>${i.title}</li>`).join('')}</ul>
-                <div class="text-sm border-t border-gray-700 pt-2 mt-2">Valor: GC ${b.betAmount.toFixed(2)} | Retorno: <span class="text-green-400">GC ${b.potentialWinnings.toFixed(2)}</span></div>
-            </div>`).join('') : '<p class="text-gray-400">Nenhum desafio ativo.</p>';
-    } catch (e) { list.innerHTML = '<p class="text-red-400">Erro ao carregar.</p>'; }
-}
-
-async function fetchAndRenderHistoryBets() {
-    const list = document.getElementById('history-bets-list');
-    list.innerHTML = '<div class="loader mx-auto"></div>';
-    try {
-        const bets = await fetchWithAuth('/api/get-history-bets');
-        bets.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-        list.innerHTML = bets.length ? bets.map(b => {
-            const colors = { won: 'text-green-400 border-green-500', lost: 'text-red-400 border-red-500', void: 'text-gray-400 border-gray-500' };
-            const st = b.status || 'lost';
-            return `
-            <div class="glass-card p-4 border-l-4 ${colors[st].split(' ')[1]} mb-2">
-                <p class="text-xs font-bold ${colors[st].split(' ')[0]}">${st.toUpperCase()}</p>
-                <h3 class="text-lg font-semibold text-white">Desafio (${b.betItems.length}x)</h3>
-                <ul class="text-sm text-gray-300 list-disc list-inside my-2">${b.betItems.map(i => `<li>${i.title}</li>`).join('')}</ul>
-                <div class="text-sm border-t border-gray-700 pt-2 mt-2">Resultado: <span class="${colors[st].split(' ')[0]} font-bold">${st === 'won' ? '+' : st === 'void' ? '+' : '-'}GC ${st === 'won' ? b.potentialWinnings.toFixed(2) : b.betAmount.toFixed(2)}</span></div>
-            </div>`;
-        }).join('') : '<p class="text-gray-400">Sem histórico.</p>';
-    } catch (e) { list.innerHTML = '<p class="text-red-400">Erro ao carregar.</p>'; }
-}
-
+// --- CUSTOM BET ---
 function openRequestBetModal() {
     if (!appState.currentGame || !appState.connectedAccounts[appState.currentGame]) return showError("Conecte a conta.");
-    document.getElementById('request-target-label').textContent = `Meta de Kills`;
-    resetRequestModal();
-    toggleModal('request-bet-modal', true);
-}
-
-function resetRequestModal() {
-    document.getElementById('request-result-container').classList.add('hidden');
     document.getElementById('request-form-container').classList.remove('hidden');
+    document.getElementById('request-result-container').classList.add('hidden');
     document.getElementById('request-target-input').value = '';
-    toggleError('request', null);
+    toggleModal('request-bet-modal', true);
 }
 
 async function handleRequestBet() {
@@ -832,42 +738,49 @@ async function handleRequestBet() {
         const c = data.challenge;
         document.getElementById('request-result-title').textContent = c.title;
         document.getElementById('request-result-odd').textContent = c.odd.toFixed(2) + 'x';
-        document.getElementById('request-add-to-slip').dataset.challenge = JSON.stringify(c);
+        
+        const addBtn = document.getElementById('request-add-to-slip');
+        addBtn.onclick = () => {
+            toggleBetSlipItem(c);
+            toggleModal('request-bet-modal', false);
+        };
+        
         document.getElementById('request-form-container').classList.add('hidden');
         document.getElementById('request-result-container').classList.remove('hidden');
     } catch (e) { toggleError('request', e.message); } finally { toggleLoading('request', false); }
 }
 
-function handleAddCustomBetToSlip(e) {
-    toggleBetSlipItem(JSON.parse(e.target.dataset.challenge));
-    toggleModal('request-bet-modal', false);
+function resetRequestModal() {
+    document.getElementById('request-result-container').classList.add('hidden');
+    document.getElementById('request-form-container').classList.remove('hidden');
 }
 
+function handleAddCustomBetToSlip(e) { /* Logic moved inside handleRequestBet closure */ }
+
+// --- DEPOSIT / WITHDRAW / COUPON ---
+
 function openDepositModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide o KYC.");
-    document.getElementById('deposit-amount').value = '';
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
     document.getElementById('deposit-step-1').classList.remove('hidden');
     document.getElementById('deposit-step-2').classList.add('hidden');
-    const couponInput = document.getElementById('deposit-coupon-input');
-    if(couponInput) couponInput.value = '';
     toggleModal('deposit-modal', true);
 }
 
 async function handleGeneratePix() {
     const val = parseFloat(document.getElementById('deposit-amount').value);
-    const couponCode = document.getElementById('deposit-coupon-input')?.value || '';
+    const couponCode = document.getElementById('deposit-coupon-input').value;
     if (val < 20) return toggleError('deposit', "Mínimo R$ 20.");
     
     toggleLoading('deposit', true);
     try {
         const data = await fetchWithAuth('/api/deposit/generate-pix', { 
-            method: 'POST', body: JSON.stringify({ amount: val, couponCode: couponCode })
+            method: 'POST', body: JSON.stringify({ amount: val, couponCode })
         });
         document.getElementById('deposit-qrcode-img').src = data.qrCodeBase64;
         document.getElementById('deposit-copypaste').value = data.copyPaste;
         document.getElementById('deposit-step-1').classList.add('hidden');
         document.getElementById('deposit-step-2').classList.remove('hidden');
-        if(data.bonusApplied) showMessage("Cupom ativado!", 'success');
+        if(data.bonusApplied) showMessage("Cupom aplicado!", 'success');
     } catch (e) { toggleError('deposit', e.message); } finally { toggleLoading('deposit', false); }
 }
 
@@ -879,9 +792,8 @@ function copyPixCode() {
 }
 
 function openWithdrawModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide o KYC.");
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
     document.getElementById('withdraw-amount').value = '';
-    document.getElementById('withdraw-max-balance').textContent = `GC ${appState.wallet.toFixed(2)}`;
     document.getElementById('withdraw-pix-key').value = appState.kycData.cpf;
     toggleModal('withdraw-modal', true);
 }
@@ -900,35 +812,65 @@ async function handleRequestWithdraw() {
     } catch (e) { toggleError('withdraw', e.message); } finally { toggleLoading('withdraw', false); }
 }
 
-function toggleModal(id, show) {
-    const el = document.getElementById(id);
-    const back = document.getElementById('modal-backdrop');
-    if (show) { el.classList.remove('hidden'); back.classList.remove('hidden'); }
-    else { el.classList.add('hidden'); back.classList.add('hidden'); }
+async function handleRedeemCoupon() {
+    const code = document.getElementById('coupon-input').value;
+    if(!code) return showError("Digite código.");
+    try {
+        const res = await fetchWithAuth('/api/redeem-coupon', { method: 'POST', body: JSON.stringify({ code }) });
+        const data = await fetchWithAuth('/api/get-user-data');
+        appState.bonus_wallet = data.bonus_wallet;
+        appState.rollover_target = data.rollover_target;
+        updateWalletUI();
+        updateRolloverUI();
+        showMessage(`Bônus de ${res.amount} GC ativado!`, 'success');
+    } catch (e) { showError(e.message); }
 }
 
-function toggleLoading(prefix, show) {
-    const loader = document.getElementById(`${prefix}-loader`) || document.getElementById(`${prefix}-modal-loader`);
-    const text = document.getElementById(`${prefix}-btn-text`);
-    if (show) { loader?.classList.remove('hidden'); text?.classList.add('hidden'); }
-    else { loader?.classList.add('hidden'); text?.classList.remove('hidden'); }
+async function handleConvertBonus() {
+    try {
+        const res = await fetchWithAuth('/api/convert-bonus', { method: 'POST' });
+        appState.wallet += res.convertedAmount;
+        appState.bonus_wallet = 0;
+        appState.rollover_target = 0;
+        updateWalletUI();
+        updateRolloverUI();
+        showMessage("Convertido com sucesso!", 'success');
+    } catch (e) { showError(e.message); }
 }
 
-function toggleError(prefix, msg) {
-    const el = document.getElementById(`${prefix}-error-msg`);
-    if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
-    else el.classList.add('hidden');
+// --- HISTORY ---
+async function fetchAndRenderActiveBets() {
+    const list = document.getElementById('active-bets-list');
+    list.innerHTML = '<div class="text-center"><div class="loader w-6 h-6 inline-block"></div></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-active-bets');
+        list.innerHTML = bets.length ? bets.map(b => `
+            <div class="glass-card p-4">
+                <div class="flex justify-between text-xs text-gray-400 mb-2"><span>Pendente</span><span>${new Date(b.createdAt).toLocaleDateString()}</span></div>
+                <div class="space-y-1 mb-3">${b.betItems.map(i => `<p class="text-sm font-bold">▪ ${i.title}</p>`).join('')}</div>
+                <div class="text-xs flex justify-between border-t border-white/10 pt-2">
+                    <span>Aposta: GC ${b.betAmount}</span>
+                    <span class="text-green-400">Retorno: GC ${b.potentialWinnings.toFixed(2)}</span>
+                </div>
+            </div>`).join('') : '<p class="text-gray-500 text-center text-sm">Nenhuma aposta ativa.</p>';
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center text-xs">${e.message}</p>`; }
 }
 
-function showRegisterError(msg) { toggleError('register', msg); }
-
-function showMessage(msg, type) {
-    const m = document.getElementById('message-modal');
-    const c = document.getElementById('message-modal-content');
-    c.textContent = msg;
-    c.className = `p-4 rounded-lg text-white font-semibold ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
-    m.classList.remove('hidden');
-    setTimeout(() => m.classList.add('hidden'), 3000);
+async function fetchAndRenderHistoryBets() {
+    const list = document.getElementById('history-bets-list');
+    list.innerHTML = '<div class="text-center"><div class="loader w-6 h-6 inline-block"></div></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-history-bets');
+        bets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        list.innerHTML = bets.length ? bets.map(b => {
+            const color = b.status === 'won' ? 'text-green-400' : b.status === 'void' ? 'text-gray-400' : 'text-red-400';
+            const result = b.status === 'won' ? `+GC ${b.potentialWinnings.toFixed(2)}` : b.status === 'void' ? `+GC ${b.betAmount}` : `-GC ${b.betAmount}`;
+            return `
+            <div class="glass-card p-4 border-l-2 ${b.status === 'won' ? 'border-green-500' : 'border-red-500'}">
+                <div class="flex justify-between text-xs mb-2"><span class="font-bold uppercase ${color}">${b.status}</span><span class="text-gray-500">${new Date(b.createdAt).toLocaleDateString()}</span></div>
+                <div class="space-y-1 mb-2">${b.betItems.map(i => `<p class="text-sm">▪ ${i.title}</p>`).join('')}</div>
+                <div class="text-right font-bold ${color}">${result}</div>
+            </div>`;
+        }).join('') : '<p class="text-gray-500 text-center text-sm">Sem histórico.</p>';
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center text-xs">${e.message}</p>`; }
 }
-
-function showError(msg) { showMessage(msg, 'error'); }

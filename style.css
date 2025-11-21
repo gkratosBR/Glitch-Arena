@@ -24,7 +24,6 @@ body {
     transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
-/* Efeito Hover Suave para Cards Selecionáveis */
 .game-select-card:hover {
     transform: translateY(-2px);
     border-color: rgba(138, 43, 226, 0.5);
@@ -39,174 +38,74 @@ body {
     background-clip: text;
 }
 
-/* --- INPUTS E FORMULÁRIOS (Revisão Completa) --- */
-
-/* Base para todos os inputs (incluindo os do modal de cadastro) */
+/* --- INPUTS (Fix Autofill) --- */
 .form-input, input:not([type="checkbox"]):not([type="radio"]), select {
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.4) !important; /* Um pouco mais escuro para contraste */
+    background-color: rgba(0, 0, 0, 0.4) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 0.5rem;
-    padding: 0.85rem 1rem !important; /* Altura confortável para toque */
+    padding: 0.85rem 1rem !important;
     color: #ffffff !important;
     font-size: 0.95rem;
     transition: all 0.2s ease;
-    appearance: none; /* Remove estilos nativos do sistema */
-    margin-bottom: 0.75rem; /* Espaçamento padrão */
+    margin-bottom: 0.75rem;
 }
 
 .form-input:focus, input:focus, select:focus {
     outline: none;
-    border-color: #8A2BE2 !important; /* Roxo da marca */
+    border-color: #8A2BE2 !important;
     box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.15);
     background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
-.form-input::placeholder, input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
-}
-
-/* HACK CRÍTICO: Sobrescreve o fundo branco/amarelo do Autofill do Chrome/Edge */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #131316 inset !important; /* Cor escura sólida para cobrir o branco */
+    -webkit-box-shadow: 0 0 0 30px #131316 inset !important;
     -webkit-text-fill-color: white !important;
-    caret-color: white;
     transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Ajuste específico para input de data (ícone de calendário) */
-input[type="date"] {
-    color-scheme: dark;
-}
-::-webkit-calendar-picker-indicator {
-    filter: invert(1); /* Deixa o ícone branco */
-    opacity: 0.5;
-    cursor: pointer;
-}
-::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
-}
-
-/* Checkbox customizado simples */
-input[type="checkbox"] {
-    width: 1.2rem;
-    height: 1.2rem;
-    accent-color: #8A2BE2;
-    background-color: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.2);
-    cursor: pointer;
-    vertical-align: middle;
-    margin-right: 0.5rem;
-    appearance: auto; /* Mantém o nativo mas com cor controlada */
-}
-
-/* --- Botões --- */
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    filter: grayscale(0.8);
-}
-
-/* --- Navegação Inferior (Mobile First) --- */
+/* --- Navegação --- */
 .bottom-nav {
     background: rgba(10, 9, 12, 0.95);
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.nav-item {
-    color: #6b7280; /* Gray-500 */
-    transition: all 0.2s ease;
-}
+.nav-item { color: #6b7280; transition: all 0.2s ease; }
+.nav-item.active { color: #8A2BE2; transform: scale(1.1); }
 
-.nav-item.active {
-    color: #8A2BE2;
-    transform: scale(1.1);
-}
-
-.nav-item:not(.active):hover {
-    color: #e0e0e0;
-}
-
-/* --- Gestão de Páginas (SPA) - FIX TELA PRETA --- */
+/* --- SPA Pages (Sem !important) --- */
+/* As páginas ficam escondidas por padrão (display: none) */
 .page {
     display: none;
     opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    transition: opacity 0.3s ease-in-out;
 }
 
+/* Quando ativa, a página aparece. O JS vai garantir que apenas uma tenha essa classe */
 .page.active {
-    display: block !important; /* Força a exibição sobrepondo qualquer regra inline */
-    opacity: 1 !important;     /* Força a opacidade */
-    animation: fadeIn 0.3s ease-out;
+    display: block;
+    opacity: 1;
+    animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Loader Animado --- */
+/* --- Loader --- */
 .loader {
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top: 3px solid #8A2BE2; /* Roxo */
+    border-top: 3px solid #8A2BE2;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* --- Scrollbar Customizada (Webkit) --- */
-::-webkit-scrollbar {
-    width: 6px;
-}
-::-webkit-scrollbar-track {
-    background: #0a090c; 
-}
-::-webkit-scrollbar-thumb {
-    background: #333; 
-    border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #555; 
-}
-
-/* --- Estilos Específicos para Modais --- */
-#modal-backdrop {
-    transition: opacity 0.2s ease;
-}
-
-#deposit-copypaste {
-    font-family: monospace;
-    letter-spacing: 0.5px;
-}
-
-#deposit-qrcode-img {
-    display: block;
-    margin: 0 auto;
-    border-radius: 8px; 
-}
-
-/* Botões de Depósito Rápido */
-.deposit-preset-btn {
-    transition: background-color 0.2s, transform 0.1s;
-    border: 1px solid rgba(255,255,255,0.05);
-}
-.deposit-preset-btn:hover {
-    border-color: rgba(138, 43, 226, 0.3);
-}
-.deposit-preset-btn:active {
-    transform: scale(0.95);
-}
-
-/* Estilos Adicionais para Termos de Uso (Rolagem) */
-.custom-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: #333 #0a090c;
-}
+/* --- Utilitários --- */
+#modal-backdrop { transition: opacity 0.2s ease; }
+.custom-scroll { scrollbar-width: thin; scrollbar-color: #333 #0a090c; }
