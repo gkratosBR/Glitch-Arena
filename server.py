@@ -178,7 +178,7 @@ def get_platform_config():
                 'withdraw_fee': 5.00, 'free_withdraw_threshold': 100.00, 'fee_payer': 'user'
             },
             "margins": {'main': 0.15, 'stats': 0.30}, 
-            "math": {'difficulty_scalar': 0.30, 'safety_reduction': 0.10},
+            "math": {'min_difficulty': 0.25, 'max_difficulty': 0.65, 'safety_reduction': 0.10},
             "system": {'stats_ttl_minutes': 45, 'resolution_interval_minutes': 10},
             "limits": {'max_global_bet_limit': 200.0}, 
             "referral": {'referrer_amount': 5.00, 'rollover_multiplier': 20.0},

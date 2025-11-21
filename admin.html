@@ -44,7 +44,7 @@
 
         <main class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
             
-            <!-- Coluna Esquerda: Stats & Configs -->
+            <!-- Coluna Esquerda: Configurações -->
             <div class="lg:col-span-2 space-y-6">
                 
                 <!-- KPIs -->
@@ -63,76 +63,14 @@
                     </div>
                 </div>
 
-                <!-- Configurações Avançadas (Engine Financeira) -->
-                <div class="glass-card p-6 border border-purple-500/20">
-                    <h2 class="text-lg font-bold mb-6 border-b border-white/10 pb-2 flex items-center gap-2">
-                        <span>⚙️</span> Engenharia Financeira & Odds
-                    </h2>
-                    <form id="config-form" class="space-y-6">
-                        
-                        <!-- Política de Saques -->
-                        <div class="bg-white/5 p-4 rounded-lg border border-white/5">
-                            <h3 class="text-sm font-semibold text-red-400 mb-3 uppercase tracking-wider">Política de Custos de Saque</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label class="text-xs text-gray-400">Taxa Fixa (R$)</label>
-                                    <input type="number" id="config-withdraw-fee" class="form-input mt-1" placeholder="5.00">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-400">Isenção acima de (R$)</label>
-                                    <input type="number" id="config-free-withdraw-threshold" class="form-input mt-1" placeholder="100.00">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-400">Quem paga a taxa?</label>
-                                    <select id="config-fee-behavior" class="form-input mt-1 bg-[#0a090c]">
-                                        <option value="user">Cliente (Desconta do valor)</option>
-                                        <option value="house">Casa (Nós absorvemos)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Matemática das Odds -->
-                        <div class="bg-white/5 p-4 rounded-lg border border-white/5">
-                            <h3 class="text-sm font-semibold text-blue-400 mb-3 uppercase tracking-wider">Matemática das Odds</h3>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Dificuldade -->
-                                <div>
-                                    <label class="text-xs text-gray-400 mb-1 block">Dificuldade dos Desafios (Stats)</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="range" id="config-difficulty-scalar" min="10" max="100" step="5" class="w-full accent-purple-600">
-                                        <span id="val-difficulty" class="text-sm font-bold w-12">30%</span>
-                                    </div>
-                                    <p class="text-[10px] text-gray-500 mt-1">Aumenta a meta de Kills/Assists em X% sobre a média do jogador.</p>
-                                </div>
-
-                                <!-- Redutor de Segurança -->
-                                <div>
-                                    <label class="text-xs text-gray-400 mb-1 block">Margem de Segurança (Subtração de Odd)</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="range" id="config-safety-reduction" min="0" max="30" step="1" class="w-full accent-red-600">
-                                        <span id="val-safety" class="text-sm font-bold w-12">10%</span>
-                                    </div>
-                                    <p class="text-[10px] text-gray-500 mt-1">Reduz a Odd final em X% sem alterar a dificuldade do desafio.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Margens Tradicionais -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-xs text-gray-400">Margem Global (Vitória)</label>
-                                <input type="number" id="config-margin-main" class="form-input mt-1" placeholder="15">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400">Margem Global (Stats)</label>
-                                <input type="number" id="config-margin-stats" class="form-input mt-1" placeholder="30">
-                            </div>
-                        </div>
-
-                        <!-- Limites -->
-                        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <form id="config-form" class="space-y-6">
+                    
+                    <!-- BLOCCO 1: FINANCEIRO -->
+                    <div class="glass-card p-6 border border-green-500/20">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-green-400">
+                            <span>💸</span> Política Financeira
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                             <div>
                                 <label class="text-xs text-gray-400">Depósito Mín (R$)</label>
                                 <input type="number" id="config-min-deposit" class="form-input mt-1">
@@ -141,27 +79,127 @@
                                 <label class="text-xs text-gray-400">Saque Mín (R$)</label>
                                 <input type="number" id="config-min-withdrawal" class="form-input mt-1">
                             </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Taxa Saque (R$)</label>
+                                <input type="number" id="config-withdraw-fee" class="form-input mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Isenção Acima (R$)</label>
+                                <input type="number" id="config-free-withdraw-threshold" class="form-input mt-1">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Quem paga a taxa?</label>
+                            <select id="config-fee-behavior" class="form-input mt-1 bg-[#0a090c]">
+                                <option value="user">Cliente (Desconta do valor)</option>
+                                <option value="house">Casa (Nós pagamos)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- BLOCCO 2: MATEMÁTICA (ATUALIZADO COM RANGE) -->
+                    <div class="glass-card p-6 border border-purple-500/20">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-purple-400">
+                            <span>🧮</span> Engine de Odds (Dinâmica)
+                        </h2>
+                        
+                        <!-- Área de Dificuldade Dinâmica -->
+                        <div class="bg-purple-500/5 p-4 rounded-lg border border-purple-500/10 mb-4">
+                            <p class="text-xs font-bold text-purple-300 mb-3 uppercase tracking-wide">Ajuste Automático de Dificuldade (Stats)</p>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-xs text-gray-400 mb-1 block">Mínimo (Para Ruins/Azarões)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="config-min-difficulty" min="0" max="50" step="1" class="w-full accent-blue-500">
+                                        <span id="val-min-difficulty" class="text-sm font-bold w-12 text-blue-400">25%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 mb-1 block">Máximo (Para Bons/Smurfs)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="config-max-difficulty" min="50" max="150" step="1" class="w-full accent-red-500">
+                                        <span id="val-max-difficulty" class="text-sm font-bold w-12 text-red-400">65%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-2">O sistema vai variar a meta entre o Mínimo e o Máximo com base no Winrate do jogador.</p>
                         </div>
 
-                        <!-- Gateway Oculto -->
-                        <div class="hidden">
-                            <input type="text" id="config-suitpay-client-id">
-                            <input type="text" id="config-suitpay-client-secret">
-                            <input type="number" id="config-min-level">
-                            <input type="number" id="config-max-global-bet-limit">
-                            <input type="number" id="config-stats-ttl">
-                            <input type="number" id="config-resolution-interval">
+                        <!-- Margem de Segurança -->
+                        <div class="mb-4">
+                            <label class="text-xs text-gray-400 mb-1 block">Margem de Segurança (Subtração de Odd)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="range" id="config-safety-reduction" min="0" max="30" step="1" class="w-full accent-yellow-500">
+                                <span id="val-safety" class="text-sm font-bold w-12 text-yellow-400">10%</span>
+                            </div>
                         </div>
 
-                        <button type="submit" id="config-save-btn" class="btn-primary w-full py-4 rounded-lg font-bold text-white shadow-lg hover:shadow-purple-500/20 transition text-lg">
-                            SALVAR CONFIGURAÇÕES
-                        </button>
-                    </form>
-                </div>
+                        <div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+                            <div>
+                                <label class="text-xs text-gray-400">Margem Global (Vitória %)</label>
+                                <input type="number" id="config-margin-main" class="form-input mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Margem Global (Stats %)</label>
+                                <input type="number" id="config-margin-stats" class="form-input mt-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCCO 3: INDICAÇÃO (RESTAURADO) -->
+                    <div class="glass-card p-6 border border-blue-500/20">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-400">
+                            <span>🤝</span> Sistema de Indicação
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-xs text-gray-400">Prêmio Indicador (R$)</label>
+                                <input type="number" id="config-referrer-amount" class="form-input mt-1" placeholder="5.00">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Prêmio Indicado (R$)</label>
+                                <input type="number" id="config-referee-amount" class="form-input mt-1" placeholder="5.00">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Mult. Rollover (x)</label>
+                                <input type="number" id="config-rollover-multiplier" class="form-input mt-1" placeholder="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCCO 4: INTEGRAÇÕES (RESTAURADO) -->
+                    <div class="glass-card p-6 border border-gray-500/20">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-400">
+                            <span>🔌</span> Sistema & Chaves
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs text-gray-400">Gateway Client ID</label>
+                                <input type="text" id="config-suitpay-client-id" class="form-input mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Gateway Client Secret</label>
+                                <input type="password" id="config-suitpay-client-secret" class="form-input mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Nível Mínimo (LoL)</label>
+                                <input type="number" id="config-min-level" class="form-input mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400">Teto de Aposta (R$)</label>
+                                <input type="number" id="config-max-global-bet-limit" class="form-input mt-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="config-save-btn" class="btn-primary w-full py-4 rounded-lg font-bold text-white shadow-lg hover:shadow-purple-500/20 transition text-lg sticky bottom-4 z-10">
+                        SALVAR TODAS AS CONFIGURAÇÕES
+                    </button>
+                </form>
 
                 <!-- Cupons -->
                 <div class="glass-card p-6">
-                    <h3 class="text-lg font-bold mb-4">Criar Cupom</h3>
+                    <h3 class="text-lg font-bold mb-4">Criar Cupom Manual</h3>
                     <form id="create-coupon-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input type="text" id="coupon-code" class="form-input uppercase" placeholder="CÓDIGO">
                         <input type="number" id="coupon-amount" class="form-input" placeholder="Valor (R$)">
@@ -171,8 +209,10 @@
                     </form>
                     <div id="coupon-result" class="mt-4 hidden p-3 bg-green-500/20 text-green-400 rounded text-center font-bold"></div>
                 </div>
-                
-                <!-- Busca Usuário -->
+            </div>
+
+            <!-- Coluna Direita -->
+            <div class="lg:col-span-1 space-y-6">
                 <div class="glass-card p-6">
                     <h3 class="text-lg font-bold mb-4">Consultar Jogador</h3>
                     <div class="flex gap-2">
@@ -181,10 +221,7 @@
                     </div>
                     <div id="search-user-result" class="mt-4 hidden"></div>
                 </div>
-            </div>
 
-            <!-- Coluna Direita: Listas -->
-            <div class="lg:col-span-1 space-y-6">
                 <div class="glass-card p-6">
                     <h3 class="text-lg font-bold mb-4">Faturamento</h3>
                     <canvas id="revenue-chart" height="150"></canvas>
