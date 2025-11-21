@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('admin-login-form').addEventListener('submit', handleAdminLogin);
     document.getElementById('admin-logout-btn').addEventListener('click', () => signOut(auth));
     
-    // Listeners de Sliders (Atualiza o texto % ao lado)
+    // Listeners dos Sliders Matemáticos (Atualiza o % ao lado)
     setupSliderListener('config-min-difficulty', 'val-min-difficulty', '%');
     setupSliderListener('config-max-difficulty', 'val-max-difficulty', '%');
     setupSliderListener('config-safety-reduction', 'val-safety', '%');
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tokenResult.claims.admin) {
                     showAdminPanel(user);
                 } else {
-                    showLoginError("Acesso negado. Esta conta não é Admin.");
+                    showLoginError("Acesso negado. Conta não é Admin.");
                     await signOut(auth);
                 }
             } catch (e) { showLoginError("Erro de permissão."); }
@@ -96,7 +96,7 @@ function showAdminPanel(user) {
     loadDashboardData();
     loadConfigData();
     
-    // Listeners de Formulários
+    // Listeners de Ação
     document.getElementById('config-form').addEventListener('submit', handleSaveConfig);
     document.getElementById('create-coupon-form').addEventListener('submit', handleCreateCoupon);
     document.getElementById('search-user-btn').addEventListener('click', handleSearchUser);
@@ -113,7 +113,6 @@ async function loadDashboardData() {
     try {
         const stats = await fetchWithAdminAuth('/api/admin/dashboard-stats');
 
-        // KPIs
         const plEl = document.getElementById('kpi-platform-pl');
         plEl.textContent = `R$ ${stats.platform_pl.toFixed(2)}`;
         plEl.className = `text-2xl font-bold ${stats.platform_pl >= 0 ? 'text-green-400' : 'text-red-400'}`;
@@ -121,27 +120,25 @@ async function loadDashboardData() {
         document.getElementById('kpi-total-users').textContent = stats.total_users;
         document.getElementById('kpi-revenue').textContent = `R$ ${(stats.revenue_data.reduce((a, b) => a + b.faturamento, 0)).toFixed(2)}`;
 
-        // Gráfico
         renderRevenueChart(stats.revenue_data);
         
-        // Fila KYC
         const kycList = document.getElementById('kyc-queue-list');
         kycList.innerHTML = stats.kyc_pending_queue.length ? stats.kyc_pending_queue.map(u => `
             <li class="text-sm text-white bg-gray-800 p-2 rounded-md mb-2 border border-white/5">
                 <p class="font-bold text-purple-400">${u.email}</p>
                 <p class="text-xs text-gray-400">${u.fullname} | CPF: ${u.cpf}</p>
-            </li>`).join('') : '<li class="text-sm text-gray-500 italic">Nenhuma verificação pendente.</li>';
+            </li>`).join('') : '<li class="text-sm text-gray-500 italic">Nenhuma pendência.</li>';
 
     } catch (e) { console.error(e); }
 }
 
-// --- CONFIG DATA (LOAD & SAVE) ---
+// --- CONFIGURATIONS (LOAD & SAVE) ---
 async function loadConfigData() {
     try {
         const c = await fetchWithAdminAuth('/api/admin/get-config');
         const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val !== undefined ? val : ''; };
 
-        // 1. Margens e Taxas
+        // 1. Margens e Taxas Financeiras
         setVal('config-margin-main', (c.margins?.main * 100).toFixed(0));
         setVal('config-margin-stats', (c.margins?.stats * 100).toFixed(0));
         
@@ -151,7 +148,7 @@ async function loadConfigData() {
         setVal('config-free-withdraw-threshold', c.payment?.free_withdraw_threshold);
         setVal('config-fee-behavior', c.payment?.fee_payer || 'user');
 
-        // 2. Matemática (Ranges)
+        // 2. Matemática Avançada (Ranges de Dificuldade)
         const minDiff = (c.math?.min_difficulty || 0.25) * 100;
         const maxDiff = (c.math?.max_difficulty || 0.65) * 100;
         const safeReduct = (c.math?.safety_reduction || 0.10) * 100;
@@ -160,23 +157,23 @@ async function loadConfigData() {
         setVal('config-max-difficulty', maxDiff);
         setVal('config-safety-reduction', safeReduct);
         
-        // Atualiza textos dos sliders
+        // Atualiza os textos dos sliders
         document.getElementById('val-min-difficulty').textContent = minDiff.toFixed(0) + '%';
         document.getElementById('val-max-difficulty').textContent = maxDiff.toFixed(0) + '%';
         document.getElementById('val-safety').textContent = safeReduct.toFixed(0) + '%';
 
-        // 3. Referral (Sistema de Indicação)
+        // 3. Sistema de Indicação (Referral)
         setVal('config-referrer-amount', c.referral?.referrer_amount);
         setVal('config-referee-amount', c.referral?.referee_amount);
         setVal('config-rollover-multiplier', c.referral?.rollover_multiplier);
 
-        // 4. Sistema (Gateway e Riot)
+        // 4. Sistema e Integrações (Gateway / Riot)
         setVal('config-suitpay-client-id', c.payment_gateway?.client_id);
         setVal('config-suitpay-client-secret', c.payment_gateway?.client_secret);
         setVal('config-min-level', c.risk?.min_summoner_level);
         setVal('config-max-global-bet-limit', c.limits?.max_global_bet_limit);
 
-    } catch (e) { console.error("Erro ao carregar config:", e); }
+    } catch (e) { console.error("Erro config:", e); }
 }
 
 async function handleSaveConfig(e) {
@@ -190,7 +187,7 @@ async function handleSaveConfig(e) {
         const getVal = (id, def) => { const el = document.getElementById(id); return el && el.value ? parseFloat(el.value) : def; };
         const getStr = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
 
-        // Constrói objeto de configuração completo
+        // Objeto de Configuração Completo
         const newConfig = {
             margins: {
                 main: getVal('config-margin-main', 15) / 100,
@@ -204,7 +201,7 @@ async function handleSaveConfig(e) {
                 fee_payer: getStr('config-fee-behavior') || 'user'
             },
             math: {
-                // Converte % para decimal (Ex: 25% -> 0.25)
+                // Salva os intervalos Mínimo e Máximo
                 min_difficulty: getVal('config-min-difficulty', 25) / 100,
                 max_difficulty: getVal('config-max-difficulty', 65) / 100,
                 safety_reduction: getVal('config-safety-reduction', 10) / 100
@@ -240,7 +237,7 @@ async function handleSaveConfig(e) {
     }
 }
 
-// --- OPERAÇÕES DE CUPOM ---
+// --- CUPONS ---
 async function handleCreateCoupon(e) {
     e.preventDefault();
     const btn = document.getElementById('create-coupon-btn');
@@ -274,7 +271,7 @@ async function handleCreateCoupon(e) {
     }
 }
 
-// --- BUSCA DE USUÁRIO ---
+// --- BUSCA DE USUÁRIO + ANALYTICS VISUAL ---
 async function handleSearchUser() {
     const email = document.getElementById('search-user-email').value;
     const res = document.getElementById('search-user-result');
@@ -286,17 +283,38 @@ async function handleSearchUser() {
     
     try {
         const u = await fetchWithAdminAuth(`/api/admin/find-user?email=${email}`);
-        res.className = "mt-4 text-sm text-white p-4 bg-gray-800 rounded-lg space-y-2 border border-white/10";
+        
+        // Monta a "Ficha Técnica" Matemática se disponível
+        let analyticsHtml = '';
+        if (u.analytics) {
+            analyticsHtml = `
+                <div class="mt-3 border-t border-white/10 pt-2">
+                    <p class="text-[10px] font-bold text-blue-400 mb-2 uppercase tracking-wider">FICHA TÉCNICA (MATEMÁTICA)</p>
+                    <div class="grid grid-cols-2 gap-2 text-[10px] bg-black/30 p-2 rounded">
+            `;
+            for (const [key, val] of Object.entries(u.analytics)) {
+                analyticsHtml += `
+                    <div class="flex justify-between border-b border-white/5 pb-1 last:border-0">
+                        <span class="text-gray-500">${key}</span>
+                        <span class="text-white font-mono font-bold">${val}</span>
+                    </div>`;
+            }
+            analyticsHtml += '</div></div>';
+        } else {
+            analyticsHtml = `<p class="text-[10px] text-yellow-500 mt-2 italic border-t border-white/10 pt-2">⚠ Conta de LoL não conectada. Sem dados matemáticos.</p>`;
+        }
+
+        res.className = "mt-4 text-sm text-white p-4 bg-gray-800 rounded-lg space-y-2 border border-white/10 shadow-lg";
         
         res.innerHTML = `
             <div class="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
-                <span class="font-bold text-purple-400">${u.email}</span>
-                <span class="text-xs bg-gray-700 px-2 py-1 rounded">${u.kyc_status}</span>
+                <span class="font-bold text-purple-400 truncate max-w-[200px]" title="${u.email}">${u.email}</span>
+                <span class="text-[10px] bg-gray-700 px-2 py-1 rounded font-mono uppercase">${u.kyc_status}</span>
             </div>
             <div class="grid grid-cols-2 gap-4 text-xs">
                 <div>
                     <p class="text-gray-500">Saldo Real</p>
-                    <p class="font-bold text-lg">R$ ${u.wallet.toFixed(2)}</p>
+                    <p class="font-bold text-lg text-white">R$ ${u.wallet.toFixed(2)}</p>
                 </div>
                 <div>
                     <p class="text-gray-500">Saldo Bônus</p>
@@ -307,17 +325,18 @@ async function handleSearchUser() {
                     <p>R$ ${(u.rollover_target || 0).toFixed(2)}</p>
                 </div>
                 <div>
-                    <p class="text-gray-500">Lucro da Casa (P/L)</p>
+                    <p class="text-gray-500">Lucro da Casa</p>
                     <p class="${u.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'} font-bold">R$ ${u.profit_loss.toFixed(2)}</p>
                 </div>
             </div>
-            <div class="pt-2 border-t border-white/10 text-xs text-gray-500">
-                ID: <span class="font-mono select-all">${u.userId}</span>
+            ${analyticsHtml}
+            <div class="pt-2 border-t border-white/10 text-[10px] text-gray-600 flex justify-between">
+                <span>ID:</span> <span class="font-mono select-all">${u.userId}</span>
             </div>
         `;
     } catch (e) {
         res.textContent = "Usuário não encontrado.";
-        res.className = "mt-4 text-red-400 text-sm";
+        res.className = "mt-4 text-red-400 text-sm bg-red-500/10 p-2 rounded border border-red-500/20 text-center";
     }
 }
 
@@ -338,16 +357,22 @@ function renderRevenueChart(data) {
                 borderWidth: 2,
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: '#fff'
+                pointBackgroundColor: '#fff',
+                pointRadius: 3
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-                x: { grid: { display: false } }
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#6b7280', font: { size: 10 } }
+                },
+                x: { display: false }
             },
             plugins: { legend: { display: false } }
         }
     });
-}   
+}
