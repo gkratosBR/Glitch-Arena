@@ -8,19 +8,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- CACHE BUSTING: Adicionado ?v=2.0 para forçar atualização -->
-    <link rel="stylesheet" href="style.css?v=2.0">
+    <!-- CACHE BUSTING: v=2.2 para garantir que o navegador baixe a versão nova -->
+    <link rel="stylesheet" href="style.css?v=2.2">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* CSS DE EMERGÊNCIA: Garante que o app apareça mesmo se o style.css falhar */
+        /* CSS DE EMERGÊNCIA (CRÍTICO): 
+           Garante que os elementos fiquem visíveis se o JS mandar mostrar. 
+           O !important aqui sobrescreve qualquer conflito do Tailwind.
+        */
+        
+        /* Quando o App Shell tiver display: block, força visibilidade */
         #app-shell[style*="display: block"] {
             opacity: 1 !important;
             visibility: visible !important;
         }
+        
+        /* Quando o Auth Shell tiver display: flex, força visibilidade */
+        #auth-shell[style*="display: flex"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Garante que a página ativa apareça */
         .page.active {
             display: block !important;
             opacity: 1 !important;
         }
+
+        /* Fallback para carregamento */
+        body { background-color: #0a090c; }
     </style>
 </head>
 <body class="min-h-screen bg-[#0a090c] text-white font-[Poppins]">
@@ -31,7 +47,7 @@
         <p class="mt-4 text-gray-400 text-sm">Iniciando Glitch Arena...</p>
     </div>
 
-    <!-- AUTHENTICATION -->
+    <!-- AUTHENTICATION SHELL (Login/Register) -->
     <div id="auth-shell" class="hidden max-w-4xl mx-auto p-4 min-h-screen flex flex-col">
         <header class="py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">Glitch Arena</h1>
@@ -41,7 +57,7 @@
             </div>
         </header>
 
-        <!-- Landing -->
+        <!-- Landing Page -->
         <div id="landing-page" class="page active text-center py-16 flex-grow">
             <h2 class="text-5xl font-bold mb-4">Desafie o Sistema</h2>
             <p class="text-2xl text-gray-300 mb-8">Use sua habilidade em LoL para ganhar <span class="text-purple-400 font-semibold">Glitchcoins</span>.</p>
@@ -66,7 +82,7 @@
             </div>
         </div>
 
-        <!-- Login -->
+        <!-- Login Page -->
         <div id="login-page" class="page hidden flex justify-center items-center min-h-[60vh] flex-grow">
             <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 w-full max-w-md">
                 <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
@@ -95,7 +111,7 @@
             </div>
         </div>
 
-        <!-- Register -->
+        <!-- Register Page -->
         <div id="register-page" class="page hidden flex justify-center items-center min-h-[60vh] flex-grow">
             <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 w-full max-w-md">
                 <h2 class="text-3xl font-bold text-center mb-6">Criar Conta</h2>
@@ -180,105 +196,20 @@
                         </div>
                     </section>
 
+                    <!-- ... (Resto do conteúdo dos Termos mantido igual) ... -->
+                    <!-- (Omiti os textos longos dos termos aqui para economizar espaço, mas mantenha os do original) -->
                     <section>
                         <h3 class="text-lg font-bold text-white mb-3 flex items-center">
                             <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
                             2. Quem Somos
                         </h3>
-                        <p>
-                            A Glitch Arena é uma plataforma de performance competitiva concebida com o objetivo de
-                            aprofundar o envolvimento da comunidade e enriquecer a experiência de jogo, mantendo sempre
-                            o "fair play" como pilar central.
-                        </p>
+                        <p>A Glitch Arena é uma plataforma de performance competitiva concebida com o objetivo de aprofundar o envolvimento da comunidade e enriquecer a experiência de jogo, mantendo sempre o "fair play" como pilar central.</p>
                     </section>
-
-                    <section>
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
-                            3. Público-Alvo
-                        </h3>
-                        <ul class="space-y-3 list-disc pl-5 marker:text-purple-500">
-                            <li><strong class="text-white">3.1.</strong> A plataforma é destinada a pessoas físicas, maiores de 18 anos, que possuam uma conta dos jogos associados válida e em bom estado.</li>
-                            <li><strong class="text-white">3.2.</strong> Os usuários devem residir em um território que não proíba a participação neste tipo de plataforma.</li>
-                            <li><strong class="text-white">3.3.</strong> É estritamente proibido o cadastro e uso da Plataforma por menores de 18 anos.</li>
-                        </ul>
-                    </section>
-
-                    <section>
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
-                            4. Acesso e Cadastro
-                        </h3>
-                        <p class="mb-3"><strong class="text-white">4.1.</strong> Para acessar a Glitch Arena, é necessário realizar um cadastro completo:</p>
-                        <ul class="space-y-2 pl-4 border-l-2 border-white/10 ml-1 text-xs text-gray-400">
-                            <li>a) Fornecimento de informações pessoais válidas.</li>
-                            <li>b) Criação de uma senha segura.</li>
-                            <li>c) Realização do processo de verificação (KYC).</li>
-                            <li>d) Vinculação da conta para validação anti-fraude.</li>
-                        </ul>
-                    </section>
-
-                    <section>
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
-                            5. Regras dos Desafios
-                        </h3>
-                        <p class="mb-4">
-                            O Glitch Arena permite que os jogadores estabeleçam "Desafios de Performance" baseados
-                            em seu próprio desempenho. <strong class="text-red-400">NÃO é um serviço de apostas tradicionais com dinheiro real de terceiros.</strong>
-                        </p>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition">
-                                <strong class="text-purple-400 block mb-1 text-sm">Depósito</strong>
-                                <span class="text-xs text-gray-400">Via PIX. Crédito em até 3 dias úteis.</span>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition">
-                                <strong class="text-purple-400 block mb-1 text-sm">Liquidação</strong>
-                                <span class="text-xs text-gray-400">Automática via API oficial. Decisão final.</span>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition md:col-span-2">
-                                <strong class="text-purple-400 block mb-1 text-sm">Saque</strong>
-                                <span class="text-xs text-gray-400">Mínimo de 50 GC. Exige KYC aprovado.</span>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 bg-red-500/10 p-3 rounded border border-red-500/20">
-                            <p class="text-xs text-red-300 font-bold mb-1">REGRAS IMPORTANTES:</p>
-                            <ul class="list-disc pl-4 text-[11px] text-red-200 space-y-1">
-                                <li>Abandonar partida (AFK) = Perda automática.</li>
-                                <li>Partida "Remake" = Desafio anulado (valor devolvido).</li>
-                                <li>Transferência de saldo entre contas é proibida.</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section>
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
-                            6. Conduta e "Fair Play"
-                        </h3>
-                        <p class="mb-3 text-xs text-gray-400">Violações resultam em banimento e perda de saldo.</p>
-                        <div class="grid grid-cols-2 gap-2 text-xs font-medium">
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Match fixing</div>
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Hacks / Scripts</div>
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Assédio / AFK</div>
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Smurfing</div>
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Compartilhar Conta</div>
-                            <div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Dados Falsos</div>
-                        </div>
-                    </section>
-
-                    <section>
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-                            <span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>
-                            7. Disposições Gerais
-                        </h3>
-                        <p class="text-xs">
-                            Não nos responsabilizamos por instabilidades nas APIs da Riot Games. Créditos não geram juros.
-                            O foro eleito é o da Comarca de sua residência no Brasil.
-                        </p>
-                    </section>
+                    <section><h3 class="text-lg font-bold text-white mb-3 flex items-center"><span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>3. Público-Alvo</h3><ul class="space-y-3 list-disc pl-5 marker:text-purple-500"><li><strong class="text-white">3.1.</strong> A plataforma é destinada a pessoas físicas, maiores de 18 anos, que possuam uma conta dos jogos associados válida e em bom estado.</li><li><strong class="text-white">3.2.</strong> Os usuários devem residir em um território que não proíba a participação neste tipo de plataforma.</li><li><strong class="text-white">3.3.</strong> É estritamente proibido o cadastro e uso da Plataforma por menores de 18 anos.</li></ul></section>
+                    <section><h3 class="text-lg font-bold text-white mb-3 flex items-center"><span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>4. Acesso e Cadastro</h3><p class="mb-3"><strong class="text-white">4.1.</strong> Para acessar a Glitch Arena, é necessário realizar um cadastro completo:</p><ul class="space-y-2 pl-4 border-l-2 border-white/10 ml-1 text-xs text-gray-400"><li>a) Fornecimento de informações pessoais válidas.</li><li>b) Criação de uma senha segura.</li><li>c) Realização do processo de verificação (KYC).</li><li>d) Vinculação da conta para validação anti-fraude.</li></ul></section>
+                    <section><h3 class="text-lg font-bold text-white mb-3 flex items-center"><span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>5. Regras dos Desafios</h3><p class="mb-4">O Glitch Arena permite que os jogadores estabeleçam "Desafios de Performance" baseados em seu próprio desempenho. <strong class="text-red-400">NÃO é um serviço de apostas tradicionais com dinheiro real de terceiros.</strong></p><div class="grid grid-cols-1 md:grid-cols-2 gap-3"><div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition"><strong class="text-purple-400 block mb-1 text-sm">Depósito</strong><span class="text-xs text-gray-400">Via PIX. Crédito em até 3 dias úteis.</span></div><div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition"><strong class="text-purple-400 block mb-1 text-sm">Liquidação</strong><span class="text-xs text-gray-400">Automática via API oficial. Decisão final.</span></div><div class="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-purple-500/30 transition md:col-span-2"><strong class="text-purple-400 block mb-1 text-sm">Saque</strong><span class="text-xs text-gray-400">Mínimo de 50 GC. Exige KYC aprovado.</span></div></div><div class="mt-4 bg-red-500/10 p-3 rounded border border-red-500/20"><p class="text-xs text-red-300 font-bold mb-1">REGRAS IMPORTANTES:</p><ul class="list-disc pl-4 text-[11px] text-red-200 space-y-1"><li>Abandonar partida (AFK) = Perda automática.</li><li>Partida "Remake" = Desafio anulado (valor devolvido).</li><li>Transferência de saldo entre contas é proibida.</li></ul></div></section>
+                    <section><h3 class="text-lg font-bold text-white mb-3 flex items-center"><span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>6. Conduta e "Fair Play"</h3><p class="mb-3 text-xs text-gray-400">Violações resultam em banimento e perda de saldo.</p><div class="grid grid-cols-2 gap-2 text-xs font-medium"><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Match fixing</div><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Hacks / Scripts</div><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Assédio / AFK</div><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Smurfing</div><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Compartilhar Conta</div><div class="bg-red-900/20 p-2 rounded text-center text-red-300 border border-red-500/10">🚫 Dados Falsos</div></div></section>
+                    <section><h3 class="text-lg font-bold text-white mb-3 flex items-center"><span class="bg-purple-600 w-1 h-6 mr-3 rounded-full"></span>7. Disposições Gerais</h3><p class="text-xs">Não nos responsabilizamos por instabilidades nas APIs da Riot Games. Créditos não geram juros. O foro eleito é o da Comarca de sua residência no Brasil.</p></section>
 
                 </div>
 
@@ -291,7 +222,7 @@
             </div>
         </div>
 
-    <!-- APP MAIN -->
+    <!-- APP MAIN (Página Principal após Login) -->
     <div id="app-shell" class="hidden max-w-2xl mx-auto p-4 pb-28 min-h-screen">
         
         <!-- Home -->
@@ -453,25 +384,22 @@
     <!-- MODALS -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-opacity"></div>
 
-    <!-- Deposit Modal (Compra de Glitchcoins) -->
+    <!-- Deposit Modal -->
     <div id="deposit-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
         <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto shadow-2xl">
             <h3 class="text-xl font-bold mb-4">Comprar Glitchcoins</h3>
             <div id="deposit-step-1">
                 <p class="text-xs text-gray-400 mb-4">1 Real (BRL) = 1 Glitchcoin (GC)</p>
                 <input type="number" id="deposit-amount" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-4 text-white" placeholder="Valor em R$ (Min 20)">
-                
                 <div class="flex gap-2 mb-4">
                     <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="20">20 GC</button>
                     <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="50">50 GC</button>
                     <button class="deposit-preset-btn flex-1 bg-white/5 hover:bg-white/10 py-2 rounded text-xs" data-value="100">100 GC</button>
                 </div>
-
                 <div class="mb-4">
                     <label class="text-xs text-gray-400 mb-1 block">Cupom (Opcional)</label>
                     <input type="text" id="deposit-coupon-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white uppercase tracking-widest placeholder-gray-600 text-sm" placeholder="CÓDIGO">
                 </div>
-
                 <p id="deposit-error-msg" class="text-red-400 text-xs mb-3 hidden"></p>
                 <div class="flex justify-end gap-3">
                     <button id="deposit-modal-cancel" class="text-sm text-gray-400 hover:text-white">Cancelar</button>
@@ -572,7 +500,6 @@
     <div id="request-bet-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
         <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto text-center">
             <h3 class="font-bold text-lg mb-4">Desafio Personalizado</h3>
-            
             <div id="request-form-container">
                 <p class="text-gray-400 text-xs mb-4">Qual sua meta de Kills para a próxima partida?</p>
                 <input type="number" id="request-target-input" class="w-full bg-black/30 border border-white/10 rounded-lg p-3 mb-2 text-white text-center" placeholder="Ex: 15">
@@ -582,7 +509,6 @@
                     <button id="request-modal-submit" class="bg-purple-600 px-6 py-2 rounded-lg font-bold text-sm">Calcular Mult.</button>
                 </div>
             </div>
-
             <div id="request-result-container" class="hidden">
                 <div class="bg-white/5 p-4 rounded-xl mb-4">
                     <h4 id="request-result-title" class="font-bold">Meta</h4>
@@ -600,7 +526,7 @@
         <div id="message-modal-content" class="px-6 py-3 rounded-full shadow-2xl font-semibold text-sm"></div>
     </div>
 
-    <!-- CACHE BUSTING PARA O SCRIPT TAMBÉM -->
-    <script type="module" src="app.js?v=2.0"></script>
+    <!-- CACHE BUSTING: Versão 2.2 -->
+    <script type="module" src="app.js?v=2.2"></script>
 </body>
 </html>

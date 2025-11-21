@@ -125,6 +125,14 @@ async def get_current_user_uid(authorization: str = Header(None)):
         return auth.verify_id_token(token)['uid']
     except Exception as e: raise HTTPException(401, f"Token inválido: {str(e)}")
 
+# Nova dependência para pegar o token completo (usado no auto-heal)
+async def get_current_user_token(authorization: str = Header(None)):
+    if not authorization: raise HTTPException(401, "Token ausente")
+    try:
+        token = authorization.split(" ")[1]
+        return auth.verify_id_token(token)
+    except Exception as e: raise HTTPException(401, f"Token inválido: {str(e)}")
+
 async def verify_admin(authorization: str = Header(None)):
     if not authorization: raise HTTPException(401, "Token ausente")
     try:
@@ -264,12 +272,30 @@ async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current
         return {"status": "success", "kyc_status": status}
     except Exception as e: raise HTTPException(500, str(e))
 
+# --- ROTA CORRIGIDA: AUTO-HEAL ---
 @app.get("/api/get-user-data")
-async def get_user_data_endpoint(user_id: str = Depends(get_current_user_uid)):
+async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_token)):
+    user_id = decoded_token['uid']
     ref = db.collection('users').document(user_id)
     doc = ref.get()
-    if not doc.exists: raise HTTPException(404, "User not found")
-    data = doc.to_dict()
+    
+    # AUTO-HEAL: Se não existir no banco, cria agora mesmo.
+    if not doc.exists:
+        print(f"ALERTA: Usuário {user_id} existe no Auth mas não no DB. Recriando...")
+        new_user_data = {
+            "email": decoded_token.get('email', ''), 
+            "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
+            "connectedAccounts": {}, "createdAt": firestore.SERVER_TIMESTAMP, 
+            "profit_loss": 0.0, "total_bets_made": 0,
+            "fullname": "", "cpf": "", "birthdate": "", "kyc_status": "pending",
+            "total_wagered": 0.0, "total_deposited": 0.0, "currentBetLimit": 3.00, 
+            "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None
+        }
+        ref.set(new_user_data)
+        data = new_user_data # Usa os dados recém criados
+    else:
+        data = doc.to_dict()
+
     limit = _calculate_user_bet_limit(data, get_platform_config())
     if limit != data.get('currentBetLimit'): ref.update({'currentBetLimit': limit}); data['currentBetLimit'] = limit
     
