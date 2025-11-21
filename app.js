@@ -17,7 +17,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const API_URL = '';
+const API_URL = ''; // Vazio pois o frontend e backend estão na mesma origem
 
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
@@ -82,9 +82,9 @@ function setupAuthListeners() {
     document.getElementById('reg-submit').addEventListener('click', handleRegister); 
     document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
 
-    // NOVO: Lógica dos Termos de Uso
+    // Lógica dos Termos de Uso
     document.getElementById('open-terms-btn').addEventListener('click', () => navigateAuth('terms-page'));
-    const closeTerms = () => navigateAuth('register-page'); // Volta para o cadastro
+    const closeTerms = () => navigateAuth('register-page');
     document.getElementById('close-terms-btn').addEventListener('click', closeTerms);
     document.getElementById('terms-ok-btn').addEventListener('click', closeTerms);
     
@@ -205,6 +205,7 @@ function goToRegisterStep(step) {
 function initializeMainApp() {
     onAuthStateChanged(auth, async (user) => {
         if (appState.isRegistering) return;
+        
         if (user) {
             appState.currentUser = user;
             try {
@@ -222,11 +223,13 @@ function initializeMainApp() {
                 updateProfileUI();
                 showApp();
             } catch (e) {
-                if (e.message.includes("404")) {
-                    await signOut(auth);
-                    showAuth();
-                } else if (!e.message.includes("Sessão")) {
-                    showError("Erro ao carregar dados.");
+                console.error("Erro Inicialização:", e);
+                // CORREÇÃO: Se der erro (ex: servidor fora), desloga e mostra tela de login
+                // Isso evita a tela preta eterna.
+                await signOut(auth);
+                showAuth();
+                if (!e.message.includes("404")) {
+                    showMessage("Erro ao conectar com servidor. Tente novamente.", 'error');
                 }
             }
         } else {
@@ -282,6 +285,7 @@ async function handleRegister() {
             })
         });
         
+        // Força um reload dos dados após criar para garantir
         const data = await fetchWithAuth('/api/get-user-data');
         Object.assign(appState, { 
             wallet: data.wallet, bonus_wallet: data.bonus_wallet, rollover_target: data.rollover_target,
@@ -294,6 +298,7 @@ async function handleRegister() {
         showApp();
     } catch (error) {
         showRegisterError(error.code === 'auth/email-already-in-use' ? 'E-mail em uso.' : error.message);
+        // Se der erro na criação do user no backend, deleta o user do Auth para não ficar "meio criado"
         if (appState.currentUser) await appState.currentUser.delete().catch(() => {});
         appState.currentUser = null;
         toggleLoading('reg', false);
