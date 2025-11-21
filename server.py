@@ -31,7 +31,7 @@ import prime_engine as odds_engine
 import riot_api
 from datetime import datetime, timedelta, timezone
 
-# --- CONFIGURAÇÃO DE LOGS ---
+# --- CONFIGURAÇÃO DE LOGS (MONITORAMENTO) ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -39,7 +39,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GlitchArena")
 
-# --- FIREBASE CONFIG ---
+# --- CONFIGURAÇÃO SEGURA DO FIREBASE ---
 firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS")
 
 if not firebase_admin._apps:
@@ -58,9 +58,10 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-# --- LIFESPAN ---
+# --- LIFESPAN (INICIALIZAÇÃO/ENCERRAMENTO) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Inicia o Scheduler (Robô de Apostas)
     scheduler = BackgroundScheduler()
     scheduler.add_job(_resolve_bets_logic, 'interval', minutes=10)
     scheduler.start()
@@ -69,6 +70,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
     logger.info(">>> SISTEMA: Agendador de desafios DESLIGADO.")
 
+# --- APP FASTAPI ---
 app = FastAPI(lifespan=lifespan, title="Glitch Arena API")
 
 app.add_middleware(
@@ -79,17 +81,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MIDDLEWARE ---
+# --- MIDDLEWARE DE PERFORMANCE ---
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
+    # Loga requisições lentas (> 1 segundo) para debug
     if process_time > 1.0:
         logger.warning(f"Rota Lenta: {request.url.path} levou {process_time:.4f}s")
     return response
 
-# --- MODELS ---
+# --- MODELOS DE DADOS ---
 class InitUserRequest(BaseModel):
     email: str
     cpf: Optional[str] = ""
@@ -134,7 +137,7 @@ class ValidationKycRequest(BaseModel):
     cpf: str
     birthdate: str
 
-# --- DEPENDÊNCIAS ---
+# --- DEPENDÊNCIAS DE SEGURANÇA ---
 async def get_current_user_uid(authorization: str = Header(None)):
     if not authorization: raise HTTPException(401, "Token ausente")
     try:
@@ -163,18 +166,30 @@ async def verify_admin(authorization: str = Header(None)):
         return decoded['uid']
     except Exception as e: raise HTTPException(401, f"Erro auth: {str(e)}")
 
-# --- HELPERS ---
+# --- HELPERS (CONFIGURAÇÃO DINÂMICA) ---
 def get_platform_config():
     try:
         c = db.collection('platform').document('config').get().to_dict() or {}
+        # Defaults robustos para garantir que nada quebre se o banco estiver vazio
         defaults = {
-            "risk": {'min_summoner_level': 100}, "payment": {'min_deposit': 20.0, 'min_withdrawal': 50.0},
-            "margins": {'main': 0.15, 'stats': 0.30}, "system": {'stats_ttl_minutes': 45, 'resolution_interval_minutes': 10},
-            "limits": {'max_global_bet_limit': 200.0}, "referral": {'referrer_amount': 5.00, 'rollover_multiplier': 20.0},
+            "risk": {'min_summoner_level': 100}, 
+            "payment": {
+                'min_deposit': 20.0, 'min_withdrawal': 50.0,
+                'withdraw_fee': 5.00, 'free_withdraw_threshold': 100.00, 'fee_payer': 'user'
+            },
+            "margins": {'main': 0.15, 'stats': 0.30}, 
+            "math": {'difficulty_scalar': 0.30, 'safety_reduction': 0.10},
+            "system": {'stats_ttl_minutes': 45, 'resolution_interval_minutes': 10},
+            "limits": {'max_global_bet_limit': 200.0}, 
+            "referral": {'referrer_amount': 5.00, 'rollover_multiplier': 20.0},
             "payment_gateway": {'client_id': '', 'client_secret': ''}
         }
+        # Merge seguro (preserva o que está no banco, preenche lacunas com default)
         for k, v in defaults.items(): 
             if k not in c: c[k] = v
+            elif isinstance(v, dict):
+                for sub_k, sub_v in v.items():
+                    if sub_k not in c[k]: c[k][sub_k] = sub_v
         return c
     except Exception as e:
         logger.error(f"Erro ao ler config: {e}")
@@ -185,76 +200,96 @@ def _calculate_user_bet_limit(user_data, platform_config):
     kyc = user_data.get('kyc_status', 'pending')
     deposited, wagered = user_data.get('total_deposited', 0.0), user_data.get('total_wagered', 0.0)
     limit = 3.00
+    # Progressão de limite baseada em confiança
     if total_bets >= 3: limit = 5.00
     if total_bets >= 7: limit = 10.00
     if kyc == 'verified': limit = 20.00
     if kyc == 'verified' and deposited >= 100 and wagered >= 250: limit = 50.00
     if kyc == 'verified' and deposited >= 500 and wagered >= 1000: limit = 100.00
     
-    last = user_data.get('lastBetPlacedAt')
-    if last:
-        if hasattr(last, 'replace'): last = last.replace(tzinfo=None)
-        if (datetime.now(timezone.utc).replace(tzinfo=None) - last) > timedelta(days=30) and limit > 20: limit = 20.00
-
     global_max = platform_config.get('limits', {}).get('max_global_bet_limit', 200.0)
     return min(limit, user_data.get('wallet', 0.0) * 0.25 or limit, global_max)
 
 def _generate_referral_code(p=''): return (p+''.join(random.choices(string.ascii_uppercase+string.digits,k=6))).upper()
 
-# --- LÓGICA DE BACKGROUND (ASYNC PROCESSING) ---
+# --- LÓGICA DE BACKGROUND (WORKER ASSÍNCRONO) ---
 def process_riot_connection(user_id: str, player_id: str):
     """
     Processa a conexão com a Riot em segundo plano.
-    Isso evita que o usuário fique esperando na tela.
+    Isso evita timeout no frontend e melhora a UX.
     """
-    logger.info(f"Background: Iniciando processamento de conexão para {player_id} (User: {user_id})")
+    logger.info(f"Background: Conectando {player_id} (User: {user_id})")
     try:
         cfg = get_platform_config()
-        
-        # 1. Busca dados na Riot (Pode demorar 5-10s)
         p_data = riot_api.get_player_data(player_id, 'lol')
-        
-        # 2. Valida conta
         val = odds_engine.validate_account(p_data, cfg['risk'].get('min_summoner_level', 100))
         
         if not val['valid']:
-            logger.warning(f"Background: Conexão rejeitada para {player_id}: {val['reason']}")
-            # Salva erro no perfil para o frontend mostrar
             db.collection('users').document(user_id).set({
-                "connection_status": "error",
-                "connection_message": val['reason']
+                "connection_status": "error", "connection_message": val['reason']
             }, merge=True)
             return
 
-        # 3. Sucesso - Salva dados
         db.collection('users').document(user_id).set({
             "connectedAccounts": {
-                "lol": {
-                    "playerId": player_id, 
-                    "puuid": p_data['puuid'], 
-                    "stats": p_data['stats'], 
-                    "connectedAt": firestore.SERVER_TIMESTAMP
-                }
+                "lol": {"playerId": player_id, "puuid": p_data['puuid'], "stats": p_data['stats'], "connectedAt": firestore.SERVER_TIMESTAMP}
             },
-            "connection_status": "connected", # Sinaliza sucesso para o frontend
-            "connection_message": "Conectado com sucesso!"
+            "connection_status": "connected", "connection_message": "Conectado com sucesso!"
         }, merge=True)
         
-        db.collection('riotAccountLinks').document(p_data['puuid']).set({
-            "linkedToUserId": user_id, 
-            "createdAt": firestore.SERVER_TIMESTAMP
-        })
+        # Salva link reverso para busca rápida
+        db.collection('riotAccountLinks').document(p_data['puuid']).set({"linkedToUserId": user_id, "createdAt": firestore.SERVER_TIMESTAMP})
+        logger.info(f"Background: Sucesso conectar {player_id}")
         
-        logger.info(f"Background: Conexão finalizada com sucesso para {player_id}")
-
     except Exception as e:
-        logger.error(f"Background: Erro crítico ao conectar {player_id}: {e}")
-        db.collection('users').document(user_id).set({
-            "connection_status": "error",
-            "connection_message": "Erro ao comunicar com a Riot Games. Tente novamente."
-        }, merge=True)
+        logger.error(f"Erro conectar {player_id}: {e}")
+        db.collection('users').document(user_id).set({"connection_status": "error", "connection_message": "Erro na Riot API."}, merge=True)
 
-# --- TRANSAÇÕES (Mantidas) ---
+# --- TRANSAÇÕES FINANCEIRAS ---
+
+@firestore.transactional
+def tx_withdraw_with_fees(transaction, user_ref, amount, config):
+    """
+    Processa saque aplicando as regras financeiras configuradas no Admin.
+    """
+    snap = user_ref.get(transaction=transaction)
+    user_data = snap.to_dict()
+    current = user_data.get('wallet', 0.0)
+    
+    # Lê configurações
+    pay_config = config.get('payment', {})
+    fee = float(pay_config.get('withdraw_fee', 5.00))
+    threshold = float(pay_config.get('free_withdraw_threshold', 100.00))
+    payer = pay_config.get('fee_payer', 'user')
+    
+    final_deduction = amount
+    applied_fee = 0.0
+    
+    # Aplica taxa se abaixo do limite de isenção
+    if amount < threshold:
+        applied_fee = fee
+        if payer == 'user':
+            final_deduction = amount + fee
+        # Se payer == 'house', a casa paga, usuário só desconta o valor solicitado
+    
+    if current < final_deduction:
+        raise ValueError(f"Saldo insuficiente. Necessário: R$ {final_deduction:.2f} (Inclui taxa de R$ {applied_fee:.2f})")
+    
+    # Verifica Rollover (Segurança básica anti-lavagem)
+    wagered = user_data.get('total_wagered', 0.0)
+    deposited = user_data.get('total_deposited', 0.0)
+    if wagered < deposited:
+        raise ValueError("Rollover pendente. Aposte o valor depositado pelo menos 1x antes de sacar.")
+
+    transaction.update(user_ref, {"wallet": current - final_deduction})
+    
+    return {
+        "new_wallet": current - final_deduction, 
+        "requested": amount, 
+        "fee_deducted": applied_fee,
+        "total_deducted_from_user": final_deduction
+    }
+
 @firestore.transactional
 def tx_place_bet(transaction, user_ref, amount, bet_data):
     snap = user_ref.get(transaction=transaction)
@@ -301,6 +336,7 @@ def tx_convert_bonus(transaction, user_ref):
 
 @firestore.transactional
 def tx_withdraw(transaction, user_ref, amount):
+    # Versão legada, mantida apenas se necessário, mas tx_withdraw_with_fees é a correta agora
     snap = user_ref.get(transaction=transaction)
     current = snap.to_dict().get('wallet', 0.0)
     if current < amount: raise ValueError("Glitchcoins insuficientes")
@@ -333,11 +369,14 @@ def tx_resolve_bet(transaction, bet_ref, user_ref, bet_data, result):
     transaction.update(user_ref, up_user)
     transaction.update(bet_ref, up_bet)
 
-# --- ROTAS ---
+# --- ROTAS PÚBLICAS & PRIVADAS ---
+
 @app.post("/api/init-user")
 async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current_user_uid)):
     try:
+        logger.info(f"Registro: {payload.email}")
         if db.collection('users').document(user_id).get().exists: return {"status": "exists"}
+        
         status = "verified" if payload.cpf and len(payload.cpf) >= 11 else "pending"
         db.collection('users').document(user_id).set({
             "email": payload.email, "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
@@ -345,18 +384,23 @@ async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current
             "fullname": payload.fullname, "cpf": payload.cpf, "birthdate": payload.birthdate, "kyc_status": status,
             "total_wagered": 0.0, "total_deposited": 0.0, "currentBetLimit": 3.00, 
             "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None,
-            "connection_status": "idle" # Estado inicial da conexão
+            "connection_status": "idle"
         })
         return {"status": "success", "kyc_status": status}
-    except Exception as e: raise HTTPException(500, str(e))
+    except Exception as e:
+        logger.error(f"Erro Registro: {e}")
+        raise HTTPException(500, str(e))
 
 @app.get("/api/get-user-data")
 async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_token)):
+    """
+    Retorna dados do usuário e executa AUTO-HEAL se o usuário não existir no Firestore.
+    """
     user_id = decoded_token['uid']
     ref = db.collection('users').document(user_id)
     doc = ref.get()
     
-    # AUTO-HEAL
+    # LÓGICA DE AUTO-HEAL (Salva vidas!)
     if not doc.exists:
         logger.warning(f"AUTO-HEAL: Usuário {user_id} sem dados. Recriando...")
         new_user_data = {
@@ -374,7 +418,8 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
     else:
         data = doc.to_dict()
 
-    limit = _calculate_user_bet_limit(data, get_platform_config())
+    config = get_platform_config()
+    limit = _calculate_user_bet_limit(data, config)
     if limit != data.get('currentBetLimit'): 
         ref.update({'currentBetLimit': limit})
         data['currentBetLimit'] = limit
@@ -386,14 +431,12 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
         "fullname": data.get("fullname", ""), "cpf": data.get("cpf", ""), "birthdate": data.get("birthdate", ""),
         "kyc_status": data.get("kyc_status", "pending"), "currentBetLimit": limit,
         "my_referral_code": data.get("my_referral_code", "ERROR"),
-        # Novos campos para feedback assíncrono
-        "connection_status": data.get("connection_status", "idle"),
+        "connection_status": data.get("connection_status", "idle"), 
         "connection_message": data.get("connection_message", "")
     }
 
 @app.post("/api/place-bet")
 async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(get_current_user_uid)):
-    # ... (Mantido igual) ...
     if payload.betAmount <= 0 or not payload.betItems: raise HTTPException(400, "Inválido")
     user_ref = db.collection('users').document(user_id)
     user_data = user_ref.get().to_dict()
@@ -414,86 +457,25 @@ async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(ge
     try:
         transaction = db.transaction()
         res = tx_place_bet(transaction, user_ref, payload.betAmount, bet_data)
-        logger.info(f"Aposta recebida: User {user_id} apostou {payload.betAmount} em {total_odd}x")
+        logger.info(f"Aposta Aceita: User {user_id} | Valor: {payload.betAmount} | Odd: {total_odd}x")
         return {"status": "success", "newWallet": res['real'], "newBonusWallet": res['bonus']}
     except ValueError as e: 
-        logger.warning(f"Aposta rejeitada: {e}")
+        logger.warning(f"Aposta Recusada: {e}")
         raise HTTPException(400, str(e))
     except Exception as e: 
-        logger.error(f"Erro interno aposta: {e}")
+        logger.error(f"Erro Interno Aposta: {e}")
         raise HTTPException(500, "Erro interno")
 
-@app.post("/api/redeem-coupon")
-async def redeem_coupon_endpoint(payload: CouponRequest, user_id: str = Depends(get_current_user_uid)):
-    # ... (Mantido igual) ...
-    code = payload.code.upper()
-    coupons = list(db.collection('coupons').where(filter=FieldFilter('code', '==', code)).limit(1).stream())
-    if not coupons: raise HTTPException(404, "Inválido")
-    
-    try:
-        cfg = get_platform_config()
-        transaction = db.transaction()
-        tx_redeem_coupon(transaction, db.collection('users').document(user_id), coupons[0].reference, db.collection('coupon_usages').document(), coupons[0].to_dict()['amount'], float(cfg['referral']['rollover_multiplier']), user_id, code)
-        logger.info(f"Cupom {code} resgatado por {user_id}")
-        return {"status": "success", "amount": coupons[0].to_dict()['amount']}
-    except ValueError as e: raise HTTPException(400, str(e))
-    except Exception as e: raise HTTPException(500, str(e))
-
-@app.post("/api/convert-bonus")
-async def convert_bonus_endpoint(user_id: str = Depends(get_current_user_uid)):
-    # ... (Mantido igual) ...
-    try:
-        transaction = db.transaction()
-        val = tx_convert_bonus(transaction, db.collection('users').document(user_id))
-        logger.info(f"User {user_id} converteu {val} de bônus.")
-        return {"status": "success", "convertedAmount": val}
-    except ValueError as e: raise HTTPException(400, str(e))
-
-# --- ROTA MODIFICADA: BACKGROUND TASKS ---
-@app.post("/api/connect")
-async def connect_account_endpoint(
-    payload: ConnectRequest, 
-    background_tasks: BackgroundTasks,
-    user_id: str = Depends(get_current_user_uid)
-):
-    """
-    Inicia o processo de conexão em segundo plano e retorna IMEDIATAMENTE para o usuário.
-    """
-    try:
-        # Define estado inicial como "processando"
-        db.collection('users').document(user_id).set({
-            "connection_status": "processing",
-            "connection_message": "Analisando perfil na Riot Games..."
-        }, merge=True)
-        
-        # Joga o trabalho pesado para o background
-        background_tasks.add_task(process_riot_connection, user_id, payload.playerId)
-        
-        logger.info(f"Conexão agendada para {payload.playerId}")
-        return {"status": "processing", "message": "Conexão iniciada. Aguarde a confirmação."}
-        
-    except Exception as e: 
-        logger.error(f"Erro ao agendar conexão: {e}")
-        raise HTTPException(500, "Erro interno ao processar solicitação.")
-
-@app.post("/api/disconnect")
-async def disconnect_endpoint(user_id: str = Depends(get_current_user_uid)):
-    try:
-        db.collection('users').document(user_id).update({
-            "connectedAccounts.lol": firestore.DELETE_FIELD,
-            "connection_status": "idle",
-            "connection_message": ""
-        })
-        return {"status": "disconnected"}
-    except Exception as e: raise HTTPException(500, str(e))
-
-# ... (Resto das rotas mantidas iguais) ...
+# --- ROTA MODIFICADA: GET CHALLENGES (Passa Configs Matemáticas) ---
 @app.post("/api/get-challenges")
 async def get_challenges_endpoint(payload: GetChallengesRequest, user_id: str = Depends(get_current_user_uid)):
     try:
         acct = db.collection('users').document(user_id).get().to_dict().get("connectedAccounts", {}).get(payload.gameType)
         if not acct: raise HTTPException(400, "Não conectado")
-        return odds_engine.generate_odds(acct, payload.gameType, get_platform_config().get("margins"))
+        
+        cfg = get_platform_config()
+        # Injeta configs de Dificuldade e Segurança no motor de Odds
+        return odds_engine.generate_odds(acct, payload.gameType, cfg.get("margins"), cfg.get("math", {}))
     except Exception as e: raise HTTPException(500, str(e))
 
 @app.post("/api/request-bet")
@@ -501,35 +483,103 @@ async def request_bet_endpoint(payload: RequestBetRequest, user_id: str = Depend
     try:
         acct = db.collection('users').document(user_id).get().to_dict().get("connectedAccounts", {}).get(payload.gameType)
         if not acct: raise HTTPException(400, "Não conectado")
-        res = odds_engine.calculate_custom_odd(acct, 'lol', payload.target, get_platform_config().get("margins"))
+        
+        cfg = get_platform_config()
+        res = odds_engine.calculate_custom_odd(acct, 'lol', payload.target, cfg.get("margins"), cfg.get("math", {}))
         if "error" in res: raise HTTPException(400, res["error"])
         return res
+    except Exception as e: raise HTTPException(500, str(e))
+
+# --- ROTA MODIFICADA: WITHDRAW (Aplica Taxas) ---
+@app.post("/api/withdraw/request")
+async def withdraw_request_endpoint(payload: WithdrawRequest, user_id: str = Depends(get_current_user_uid)):
+    cfg = get_platform_config()
+    min_w = float(cfg.get('payment', {}).get('min_withdrawal', 50.0))
+    
+    if payload.amount < min_w: raise HTTPException(400, f"Mínimo {min_w} GC")
+    
+    try:
+        transaction = db.transaction()
+        # Usa a nova função que calcula taxas baseada nas configs do Admin
+        res = tx_withdraw_with_fees(transaction, db.collection('users').document(user_id), payload.amount, cfg)
+        
+        db.collection('withdrawals').add({
+            "userId": user_id, 
+            "amount_requested": res['requested'], 
+            "fee": res['fee_deducted'],
+            "total_deducted": res['total_deducted_from_user'], 
+            "status": "processing", 
+            "createdAt": firestore.SERVER_TIMESTAMP
+        })
+        logger.info(f"Saque Solicitado: {user_id} pediu {payload.amount}. Taxa aplicada: {res['fee_deducted']}")
+        return {"status": "success", "newWallet": res['new_wallet']}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+@app.post("/api/redeem-coupon")
+async def redeem_coupon_endpoint(payload: CouponRequest, user_id: str = Depends(get_current_user_uid)):
+    code = payload.code.upper()
+    coupons = list(db.collection('coupons').where(filter=FieldFilter('code', '==', code)).limit(1).stream())
+    if not coupons: raise HTTPException(404, "Inválido")
+    try:
+        cfg = get_platform_config()
+        transaction = db.transaction()
+        tx_redeem_coupon(transaction, db.collection('users').document(user_id), coupons[0].reference, db.collection('coupon_usages').document(), coupons[0].to_dict()['amount'], float(cfg['referral']['rollover_multiplier']), user_id, code)
+        logger.info(f"Cupom {code} usado por {user_id}")
+        return {"status": "success", "amount": coupons[0].to_dict()['amount']}
+    except ValueError as e: raise HTTPException(400, str(e))
+    except Exception as e: raise HTTPException(500, str(e))
+
+@app.post("/api/convert-bonus")
+async def convert_bonus_endpoint(user_id: str = Depends(get_current_user_uid)):
+    try:
+        transaction = db.transaction()
+        val = tx_convert_bonus(transaction, db.collection('users').document(user_id))
+        logger.info(f"Conversão Bônus: {user_id} converteu {val}")
+        return {"status": "success", "convertedAmount": val}
+    except ValueError as e: raise HTTPException(400, str(e))
+
+# --- CONEXÃO ASSÍNCRONA (BACKGROUND TASKS) ---
+@app.post("/api/connect")
+async def connect_account_endpoint(
+    payload: ConnectRequest, 
+    background_tasks: BackgroundTasks, 
+    user_id: str = Depends(get_current_user_uid)
+):
+    try:
+        # Responde rápido e processa depois
+        db.collection('users').document(user_id).set({
+            "connection_status": "processing", 
+            "connection_message": "Analisando perfil..."
+        }, merge=True)
+        
+        background_tasks.add_task(process_riot_connection, user_id, payload.playerId)
+        
+        return {"status": "processing", "message": "Iniciado"}
+    except Exception as e: raise HTTPException(500, "Erro interno")
+
+@app.post("/api/disconnect")
+async def disconnect_endpoint(user_id: str = Depends(get_current_user_uid)):
+    try:
+        db.collection('users').document(user_id).update({
+            "connectedAccounts.lol": firestore.DELETE_FIELD, 
+            "connection_status": "idle", 
+            "connection_message": ""
+        })
+        return {"status": "disconnected"}
     except Exception as e: raise HTTPException(500, str(e))
 
 @app.post("/api/validate-kyc")
 async def validate_kyc_endpoint(payload: ValidationKycRequest, user_id: str = Depends(get_current_user_uid)):
     if not payload.cpf: raise HTTPException(400, "Dados inválidos")
     db.collection('users').document(user_id).update({"fullname": payload.fullname, "cpf": payload.cpf, "birthdate": payload.birthdate, "kyc_status": "verified"})
-    logger.info(f"KYC atualizado para {user_id}")
     return {"status": "verified"}
-
-@app.post("/api/withdraw/request")
-async def withdraw_request_endpoint(payload: WithdrawRequest, user_id: str = Depends(get_current_user_uid)):
-    if payload.amount < 50: raise HTTPException(400, "Mínimo 50 GC")
-    try:
-        transaction = db.transaction()
-        new_bal = tx_withdraw(transaction, db.collection('users').document(user_id), payload.amount)
-        db.collection('withdrawals').add({"userId": user_id, "amount": payload.amount, "status": "processing", "createdAt": firestore.SERVER_TIMESTAMP})
-        logger.info(f"Saque solicitado: {payload.amount} por {user_id}")
-        return {"status": "success", "newWallet": new_bal}
-    except ValueError as e: raise HTTPException(400, str(e))
 
 @app.post("/api/deposit/generate-pix")
 async def deposit_pix_endpoint(payload: DepositRequest, user_id: str = Depends(get_current_user_uid)):
     if payload.amount < 20: raise HTTPException(400, "Mínimo R$ 20")
     fake_pix = f"00020126580014BR.GOV.BCB.PIX0136{uuid.uuid4()}520400005303986540{payload.amount:.2f}5802BR5913SUITPAY"
     db.collection('pending_deposits').add({"userId": user_id, "amount": payload.amount, "status": "pending", "qrCode": fake_pix, "createdAt": firestore.SERVER_TIMESTAMP})
-    logger.info(f"PIX gerado para {user_id} de R$ {payload.amount}")
+    logger.info(f"Pix Gerado: {user_id} - R$ {payload.amount}")
     return {"qrCodeBase64": f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={fake_pix}", "copyPaste": fake_pix, "bonusApplied": False}
 
 @app.get("/api/get-active-bets")
@@ -561,6 +611,7 @@ async def get_config_route(uid: str = Depends(verify_admin)): return get_platfor
 @app.post("/api/admin/set-config")
 async def set_config_route(req: Request, uid: str = Depends(verify_admin)):
     db.collection('platform').document('config').set(await req.json())
+    logger.info("Configurações de Admin atualizadas")
     return {"status": "sucesso"}
 
 @app.get("/api/admin/find-user")
@@ -579,6 +630,7 @@ async def create_coupon_admin(payload: CouponRequest, uid: str = Depends(verify_
     code = payload.code.upper() or _generate_referral_code("BONUS")
     if list(db.collection('coupons').where(filter=FieldFilter('code', '==', code)).stream()): raise HTTPException(400, "Já existe")
     db.collection('coupons').add({"code": code, "amount": payload.amount, "type": 'deposit' if payload.min_deposit_required > 0 else 'manual', "min_deposit_required": payload.min_deposit_required, "max_uses": payload.max_uses, "current_uses": 0, "created_at": firestore.SERVER_TIMESTAMP, "active": True})
+    logger.info(f"Admin criou cupom: {code}")
     return {"status": "success", "code": code}
 
 def _resolve_bets_logic():
