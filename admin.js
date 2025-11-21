@@ -94,6 +94,7 @@ function showAdminPanel(user) {
     document.getElementById('admin-panel-shell').classList.remove('hidden');
     
     loadDashboardData();
+    loadAdvancedStats(); // Carrega o painel "Raio-X"
     loadConfigData();
     
     // Listeners de Ação
@@ -131,6 +132,65 @@ async function loadDashboardData() {
 
     } catch (e) { console.error(e); }
 }
+
+// --- ADVANCED STATS (RAIO-X) ---
+async function loadAdvancedStats() {
+    try {
+        const data = await fetchWithAdminAuth('/api/admin/advanced-stats');
+        
+        // Cria ou atualiza o painel de estatísticas avançadas
+        let container = document.getElementById('advanced-stats-panel');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'advanced-stats-panel';
+            container.className = 'glass-card p-6 mt-6 border border-blue-500/20 col-span-1 lg:col-span-3';
+            // Injeta logo após o grid de KPIs
+            const kpiGrid = document.querySelector('main > div.lg\\:col-span-2 > div.grid');
+            if (kpiGrid && kpiGrid.parentNode) {
+                kpiGrid.parentNode.insertBefore(container, kpiGrid.nextSibling);
+            }
+        }
+
+        container.innerHTML = `
+            <h3 class="text-lg font-bold mb-4 text-blue-400">📊 Advanced Analytics (Raio-X)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-black/30 p-3 rounded">
+                    <p class="text-xs text-gray-400">Em Aberto (Qtd)</p>
+                    <p class="text-xl font-bold text-white">${data.pending.count}</p>
+                </div>
+                <div class="bg-black/30 p-3 rounded">
+                    <p class="text-xs text-gray-400">Risco Máximo (Liability)</p>
+                    <p class="text-xl font-bold text-red-400">R$ ${data.pending.liability.toFixed(2)}</p>
+                </div>
+                <div class="bg-black/30 p-3 rounded">
+                    <p class="text-xs text-gray-400">Ticket Médio</p>
+                    <p class="text-xl font-bold text-white">R$ ${data.metrics.avg_ticket.toFixed(2)}</p>
+                </div>
+                <div class="bg-black/30 p-3 rounded">
+                    <p class="text-xs text-gray-400">Lucro Realizado</p>
+                    <p class="text-xl font-bold ${data.history.realized_pl >= 0 ? 'text-green-400' : 'text-red-400'}">R$ ${data.history.realized_pl.toFixed(2)}</p>
+                </div>
+            </div>
+            <h4 class="text-sm font-bold mb-2 text-gray-300">⚠️ Top 5 Riscos (Apostas Altas)</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                    <thead><tr class="text-gray-500 border-b border-white/10"><th>User</th><th>Aposta</th><th>Odd</th><th>Payout</th></tr></thead>
+                    <tbody class="text-gray-300">
+                        ${data.top_risk.length ? data.top_risk.map(r => `
+                            <tr class="border-b border-white/5">
+                                <td class="py-2 font-mono">${r.user.slice(0,8)}...</td>
+                                <td class="py-2">R$ ${r.amount.toFixed(2)}</td>
+                                <td class="py-2 text-purple-400 font-bold">${r.odd.toFixed(2)}x</td>
+                                <td class="py-2 text-red-400 font-bold">R$ ${r.payout.toFixed(2)}</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="4" class="py-2 text-center text-gray-500">Sem apostas de risco.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (e) { console.error("Erro Advanced Stats:", e); }
+}
+
 
 // --- CONFIGURATIONS (LOAD & SAVE) ---
 async function loadConfigData() {

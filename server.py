@@ -9,6 +9,7 @@ import time
 import logging
 from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 # FastAPI Imports
 from fastapi import FastAPI, HTTPException, Request, Depends, Header, BackgroundTasks
@@ -29,7 +30,6 @@ from google.cloud.firestore_v1.transaction import Transaction
 # Logic Imports
 import prime_engine as odds_engine
 import riot_api
-from datetime import datetime, timedelta, timezone
 
 # --- CONFIGURAÇÃO DE LOGS ---
 logging.basicConfig(
@@ -320,7 +320,7 @@ def tx_resolve_bet(transaction, bet_ref, user_ref, bet_data, result):
     transaction.update(user_ref, up_user)
     transaction.update(bet_ref, up_bet)
 
-# --- ROUTES ---
+# --- PUBLIC ENDPOINTS ---
 
 @app.post("/api/init-user")
 async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current_user_uid)):
@@ -488,7 +488,7 @@ async def get_history_bets(user_id: str = Depends(get_current_user_uid)):
     docs = db.collection('bets').where(filter=FieldFilter('userId', '==', user_id)).where(filter=FieldFilter('status', 'in', ["won", "lost", "void"])).stream()
     return [{**d.to_dict(), 'id': d.id, 'createdAt': str(d.to_dict().get('createdAt', '')), 'resolvedAt': str(d.to_dict().get('resolvedAt', ''))} for d in docs]
 
-# --- ADMIN ROUTES ---
+# --- ADMIN ROUTES (ATUALIZADO COM ADVANCED STATS) ---
 @app.post("/api/admin/set-admin")
 async def set_admin_claim(req: Request, uid: str = Depends(verify_admin)):
     data = await req.json()
@@ -500,6 +500,73 @@ async def set_admin_claim(req: Request, uid: str = Depends(verify_admin)):
 async def get_dashboard_stats(uid: str = Depends(verify_admin)):
     pl = db.collection('platform').document('stats').get().to_dict().get("total_profit_loss", 0.0) or 0.0
     return {"platform_pl": pl, "total_users": 0, "top_winners": [], "revenue_data": [], "kyc_pending_queue": []}
+
+@app.get("/api/admin/advanced-stats")
+async def get_advanced_stats(uid: str = Depends(verify_admin)):
+    """
+    Gera estatísticas financeiras e operacionais profundas do sistema.
+    """
+    try:
+        # 1. Busca todas as apostas (Pendente vs Resolvida)
+        all_bets = list(db.collection('bets').stream())
+        
+        pending_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'pending']
+        won_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'won']
+        lost_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'lost']
+        
+        # 2. Cálculos de Volume
+        total_wagered_pending = sum(b.get('betAmount', 0) for b in pending_bets)
+        liability = sum(b.get('potentialWinnings', 0) for b in pending_bets) # Risco máximo
+        
+        total_won_value = sum(b.get('potentialWinnings', 0) for b in won_bets)
+        total_lost_value = sum(b.get('betAmount', 0) for b in lost_bets)
+        
+        # Ticket Médio
+        total_bets_count = len(all_bets)
+        total_wagered_all = total_wagered_pending + total_lost_value + sum(b.get('betAmount', 0) for b in won_bets)
+        avg_ticket = total_wagered_all / total_bets_count if total_bets_count > 0 else 0.0
+        
+        # 3. Composição do dinheiro (Real vs Bônus)
+        # Isso exigiria varrer todos os users, o que é caro. Vamos estimar ou pegar de um agregado futuro.
+        # Por enquanto, vamos retornar o Liability detalhado que é o mais crítico.
+        
+        # 4. Maiores Odds em Aberto
+        high_risk_bets = sorted(pending_bets, key=lambda x: x.get('potentialWinnings', 0), reverse=True)[:5]
+        top_risk = [{
+            "user": b.get('userId'), 
+            "amount": b.get('betAmount'), 
+            "payout": b.get('potentialWinnings'),
+            "odd": b.get('totalOdd'),
+            "type": b.get('gameType')
+        } for b in high_risk_bets]
+        
+        # 5. Projeção de Lucro
+        # Lucro Realizado (Perdidas - Ganhas)
+        realized_profit = total_lost_value - total_won_value
+        
+        return {
+            "pending": {
+                "count": len(pending_bets),
+                "volume": total_wagered_pending,
+                "liability": liability
+            },
+            "history": {
+                "won_count": len(won_bets),
+                "won_value": total_won_value,
+                "lost_count": len(lost_bets),
+                "lost_value": total_lost_value,
+                "realized_pl": realized_profit
+            },
+            "metrics": {
+                "avg_ticket": avg_ticket,
+                "total_wagered": total_wagered_all
+            },
+            "top_risk": top_risk
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro stats: {e}")
+        raise HTTPException(500, "Erro ao gerar estatísticas")
 
 @app.get("/api/admin/get-config")
 async def get_config_route(uid: str = Depends(verify_admin)): return get_platform_config()
@@ -516,16 +583,13 @@ async def find_user(email: str, uid: str = Depends(verify_admin)):
     if not users: raise HTTPException(404, "Não encontrado")
     user_data = users[0].to_dict()
     
-    # GERAÇÃO DE ANALYTICS E ENVIO PARA FRONTEND
     lol_acct = user_data.get("connectedAccounts", {}).get("lol")
     if lol_acct:
         try:
             cfg = get_platform_config()
             analytics = odds_engine.get_player_analytics(lol_acct, cfg.get("math", {}))
-            # Log para o Railway
             logger.info(f"--- Analytics {email} ---")
             logger.info(json.dumps(analytics, indent=2))
-            # Envia para o Frontend
             user_data['analytics'] = analytics
         except Exception as e: logger.error(f"Erro analytics: {e}")
             
@@ -558,6 +622,7 @@ def _resolve_bets_logic():
             except Exception as e: logger.error(f"Erro desafio {doc.id}: {e}")
     except Exception as e: logger.critical(f"FALHA SCHEDULER: {e}")
 
+# --- PÁGINA INICIAL ---
 @app.get("/")
 async def serve_spa(): return FileResponse("mvp_demo.html")
 @app.get("/admin-panel")
