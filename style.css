@@ -131,7 +131,7 @@ button:disabled {
     color: #e0e0e0;
 }
 
-/* --- Gestão de Páginas (SPA) --- */
+/* --- Gestão de Páginas (SPA) - FIX TELA PRETA --- */
 .page {
     display: none;
     opacity: 0;
@@ -139,8 +139,8 @@ button:disabled {
 }
 
 .page.active {
-    display: block;
-    opacity: 1;
+    display: block !important; /* Força a exibição sobrepondo qualquer regra inline */
+    opacity: 1 !important;     /* Força a opacidade */
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -203,4 +203,10 @@ button:disabled {
 }
 .deposit-preset-btn:active {
     transform: scale(0.95);
+}
+
+/* Estilos Adicionais para Termos de Uso (Rolagem) */
+.custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #333 #0a090c;
 }

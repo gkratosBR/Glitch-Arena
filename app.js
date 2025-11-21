@@ -19,6 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const API_URL = ''; // Vazio pois o frontend e backend estão na mesma origem
 
+// Configura persistência para evitar deslogar ao atualizar a página
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 const appState = {
@@ -51,10 +52,11 @@ async function fetchWithAuth(endpoint, options = {}) {
     
     if (response.status === 401) {
         try {
+            // Tenta renovar o token se expirou
             idToken = await appState.currentUser.getIdToken(true);
             options.headers['Authorization'] = `Bearer ${idToken}`;
             response = await fetch(`${API_URL}${endpoint}`, options);
-        } catch (e) { throw new Error("Sessão expirada."); }
+        } catch (e) { throw new Error("Sessão expirada. Faça login novamente."); }
     }
 
     if (!response.ok) {
@@ -73,6 +75,59 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAuthListeners();
     setupAppListeners();
 });
+
+// --- INICIALIZAÇÃO CORRIGIDA ---
+function initializeMainApp() {
+    console.log(">>> [Debug] Monitor de Auth iniciado...");
+    onAuthStateChanged(auth, async (user) => {
+        if (appState.isRegistering) return;
+        
+        if (user) {
+            console.log(">>> [Debug] Usuário detectado:", user.uid);
+            appState.currentUser = user;
+            try {
+                console.log(">>> [Debug] Buscando dados do perfil...");
+                const data = await fetchWithAuth('/api/get-user-data');
+                console.log(">>> [Debug] Dados recebidos com sucesso.");
+                
+                Object.assign(appState, {
+                    wallet: data.wallet || 0,
+                    bonus_wallet: data.bonus_wallet || 0,
+                    rollover_target: data.rollover_target || 0,
+                    connectedAccounts: data.connectedAccounts || {},
+                    kycData: { 
+                        fullname: data.fullname || '', 
+                        cpf: data.cpf || '', 
+                        birthdate: data.birthdate || '', 
+                        kyc_status: data.kyc_status || 'pending' 
+                    },
+                    currentBetLimit: data.currentBetLimit || 3.00,
+                    myReferralCode: data.my_referral_code || ''
+                });
+                
+                updateWalletUI();
+                updateProfileUI();
+                console.log(">>> [Debug] UI atualizada. Chamando showApp()...");
+                showApp();
+            } catch (e) {
+                console.error(">>> [Debug] ERRO FATAL na inicialização:", e);
+                // Se der erro ao buscar dados (ex: servidor offline), desloga o user
+                // Isso evita que ele fique preso na tela de loading ou tela preta
+                await signOut(auth);
+                showAuth();
+                if (!e.message.includes("404")) {
+                    showMessage("Erro de conexão. Por favor, faça login novamente.", 'error');
+                }
+            }
+        } else {
+            console.log(">>> [Debug] Nenhum usuário logado. Exibindo Auth.");
+            appState.currentUser = null;
+            showAuth();
+        }
+    });
+}
+
+// --- CONFIGURAÇÃO DE EVENTOS ---
 
 function setupAuthListeners() {
     const ids = ['auth-login-btn', 'register-goto-login', 'auth-register-btn', 'landing-cta-btn', 'login-goto-register'];
@@ -202,42 +257,7 @@ function goToRegisterStep(step) {
     });
 }
 
-function initializeMainApp() {
-    onAuthStateChanged(auth, async (user) => {
-        if (appState.isRegistering) return;
-        
-        if (user) {
-            appState.currentUser = user;
-            try {
-                const data = await fetchWithAuth('/api/get-user-data');
-                Object.assign(appState, {
-                    wallet: data.wallet,
-                    bonus_wallet: data.bonus_wallet,
-                    rollover_target: data.rollover_target,
-                    connectedAccounts: data.connectedAccounts,
-                    kycData: { fullname: data.fullname, cpf: data.cpf, birthdate: data.birthdate, kyc_status: data.kyc_status },
-                    currentBetLimit: data.currentBetLimit,
-                    myReferralCode: data.my_referral_code
-                });
-                updateWalletUI();
-                updateProfileUI();
-                showApp();
-            } catch (e) {
-                console.error("Erro Inicialização:", e);
-                // CORREÇÃO: Se der erro (ex: servidor fora), desloga e mostra tela de login
-                // Isso evita a tela preta eterna.
-                await signOut(auth);
-                showAuth();
-                if (!e.message.includes("404")) {
-                    showMessage("Erro ao conectar com servidor. Tente novamente.", 'error');
-                }
-            }
-        } else {
-            appState.currentUser = null;
-            showAuth();
-        }
-    });
-}
+// --- AUTENTICAÇÃO ---
 
 async function handleLogin(e) {
     e.preventDefault();
@@ -285,7 +305,6 @@ async function handleRegister() {
             })
         });
         
-        // Força um reload dos dados após criar para garantir
         const data = await fetchWithAuth('/api/get-user-data');
         Object.assign(appState, { 
             wallet: data.wallet, bonus_wallet: data.bonus_wallet, rollover_target: data.rollover_target,
@@ -298,7 +317,6 @@ async function handleRegister() {
         showApp();
     } catch (error) {
         showRegisterError(error.code === 'auth/email-already-in-use' ? 'E-mail em uso.' : error.message);
-        // Se der erro na criação do user no backend, deleta o user do Auth para não ficar "meio criado"
         if (appState.currentUser) await appState.currentUser.delete().catch(() => {});
         appState.currentUser = null;
         toggleLoading('reg', false);
@@ -313,6 +331,8 @@ async function handleLogout() {
     showAuth();
 }
 
+// --- NAVEGAÇÃO (Corrigida para evitar tela preta) ---
+
 function navigateAuth(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const target = document.getElementById(pageId);
@@ -322,13 +342,21 @@ function navigateAuth(pageId) {
 
 function navigateApp(pageId) {
     if (appState.currentAppPage === pageId) return;
+    
+    // Remove active class from current page
     if (appState.currentAppPage) {
         const curr = document.getElementById(appState.currentAppPage);
         if(curr) curr.classList.remove('active');
     }
     
+    // Add active class to new page
     const target = document.getElementById(pageId);
-    if(target) target.classList.add('active');
+    if(target) {
+        target.classList.add('active');
+        // FORÇAR VISIBILIDADE (Fix Tela Preta)
+        target.style.display = 'block';
+        setTimeout(() => target.style.opacity = '1', 10);
+    }
     
     appState.currentAppPage = pageId;
     document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === pageId));
@@ -339,14 +367,52 @@ function navigateApp(pageId) {
     if (pageId === 'history-page') fetchAndRenderHistoryBets();
 }
 
-function showApp() { toggleShells(true); navigateApp('home-page'); }
-function showAuth() { toggleShells(false); navigateAuth('landing-page'); }
+function showApp() { 
+    console.log(">>> [Debug] showApp() chamado.");
+    toggleShells(true); 
+    
+    // Reseta o estado para garantir que a navegação dispare
+    appState.currentAppPage = null;
+    navigateApp('home-page'); 
+
+    // VERIFICAÇÃO DE SEGURANÇA MANUAL (O FIX PRINCIPAL)
+    setTimeout(() => {
+        const home = document.getElementById('home-page');
+        if (home) {
+            const style = window.getComputedStyle(home);
+            if (style.display === 'none' || style.opacity === '0') {
+                console.warn(">>> [Debug] ALERTA: Tela preta detectada. Forçando exibição via JS.");
+                home.style.display = 'block';
+                home.style.opacity = '1';
+                home.classList.add('active');
+            }
+        }
+    }, 100); // Pequeno delay para deixar o DOM respirar
+}
+
+function showAuth() { 
+    console.log(">>> [Debug] showAuth() chamado.");
+    toggleShells(false); 
+    navigateAuth('landing-page'); 
+}
 
 function toggleShells(isApp) {
-    document.getElementById('loading-shell').style.display = 'none';
-    document.getElementById('auth-shell').style.display = isApp ? 'none' : 'block';
-    document.getElementById('app-shell').style.display = isApp ? 'block' : 'none';
+    const loading = document.getElementById('loading-shell');
+    const authShell = document.getElementById('auth-shell');
+    const appShell = document.getElementById('app-shell');
+
+    if(loading) loading.style.display = 'none';
+    
+    if (isApp) {
+        if(authShell) authShell.style.display = 'none';
+        if(appShell) appShell.style.display = 'block';
+    } else {
+        if(authShell) authShell.style.display = 'block';
+        if(appShell) appShell.style.display = 'none';
+    }
 }
+
+// --- LÓGICA DO APP ---
 
 async function selectGame(gameType) {
     if (gameType !== 'lol') return showMessage("Em breve!", 'info');
