@@ -213,6 +213,7 @@
 
             <!-- Coluna Direita -->
             <div class="lg:col-span-1 space-y-6">
+                <!-- Busca Usuário -->
                 <div class="glass-card p-6">
                     <h3 class="text-lg font-bold mb-4">Consultar Jogador</h3>
                     <div class="flex gap-2">
@@ -222,10 +223,14 @@
                     <div id="search-user-result" class="mt-4 hidden"></div>
                 </div>
 
+                <!-- GRÁFICO COM FIX DE ALTURA INFINITA -->
                 <div class="glass-card p-6">
                     <h3 class="text-lg font-bold mb-4">Faturamento</h3>
-                    <canvas id="revenue-chart" height="150"></canvas>
+                    <div style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="revenue-chart"></canvas>
+                    </div>
                 </div>
+
                 <div class="glass-card p-6">
                     <h3 class="text-lg font-bold mb-4">Fila de Verificação</h3>
                     <ul id="kyc-queue-list" class="space-y-3"></ul>
