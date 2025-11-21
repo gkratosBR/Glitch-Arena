@@ -8,8 +8,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <!-- CACHE BUSTING: Adicionado ?v=2.0 para forçar atualização -->
+    <link rel="stylesheet" href="style.css?v=2.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS DE EMERGÊNCIA: Garante que o app apareça mesmo se o style.css falhar */
+        #app-shell[style*="display: block"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        .page.active {
+            display: block !important;
+            opacity: 1 !important;
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-[#0a090c] text-white font-[Poppins]">
 
@@ -588,6 +600,7 @@
         <div id="message-modal-content" class="px-6 py-3 rounded-full shadow-2xl font-semibold text-sm"></div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <!-- CACHE BUSTING PARA O SCRIPT TAMBÉM -->
+    <script type="module" src="app.js?v=2.0"></script>
 </body>
 </html>
