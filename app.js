@@ -96,9 +96,11 @@ function initializeMainApp() {
         if (appState.isRegistering) return;
         
         if (user) {
+            console.log(">>> Usuário Logado:", user.uid);
             appState.currentUser = user;
             try {
                 const data = await fetchWithAuth('/api/get-user-data');
+                
                 Object.assign(appState, {
                     wallet: data.wallet || 0,
                     bonus_wallet: data.bonus_wallet || 0,
@@ -113,6 +115,7 @@ function initializeMainApp() {
                     currentBetLimit: data.currentBetLimit || 3.00,
                     myReferralCode: data.my_referral_code || ''
                 });
+                
                 updateUI();
                 toggleShells('app');
                 navigateApp('home-page');
@@ -123,6 +126,7 @@ function initializeMainApp() {
                 showMessage("Erro de conexão. Tente novamente.", 'error');
             }
         } else {
+            console.log(">>> Sem Usuário. Tela de Login.");
             appState.currentUser = null;
             toggleShells('auth');
             navigateAuth('landing-page');
@@ -316,6 +320,16 @@ async function handleSubmitConnection() {
     }
 }
 
+async function handleDisconnect(gameType) {
+    try {
+        await fetchWithAuth('/api/disconnect', { method: 'POST', body: JSON.stringify({ gameType }) });
+        delete appState.connectedAccounts[gameType];
+        updateUI();
+        if (appState.currentGame === gameType) selectGame(gameType);
+        showMessage("Desconectado.", 'success');
+    } catch (e) { showError(e.message); }
+}
+
 async function handleKycSubmit(e) {
     e.preventDefault();
     const fullname = document.getElementById('kyc-modal-fullname').value;
@@ -371,6 +385,7 @@ function copyPixCode() {
 function openWithdrawModal() {
     if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
     document.getElementById('withdraw-amount').value = '';
+    document.getElementById('withdraw-max-balance').textContent = `GC ${appState.wallet.toFixed(2)}`;
     document.getElementById('withdraw-pix-key').value = appState.kycData.cpf;
     toggleModal('withdraw-modal', true);
 }
@@ -413,7 +428,7 @@ async function handleConvertBonus() {
     } catch (e) { showError(e.message); }
 }
 
-// --- CUSTOM BET (Funcionalidade Faltante) ---
+// --- CUSTOM BET ---
 function openRequestBetModal() {
     if (!appState.currentGame || !appState.connectedAccounts[appState.currentGame]) return showError("Conecte a conta.");
     document.getElementById('request-form-container').classList.remove('hidden');
@@ -425,8 +440,7 @@ function openRequestBetModal() {
 async function handleRequestBet() {
     const target = document.getElementById('request-target-input').value;
     if (!target) return toggleError('request', "Insira meta.");
-    toggleLoading('request', true); // Precisa ter um loader no modal request ou usamos o genérico
-    // Nota: O HTML v4 não tem loader explicito no request, então usamos um fallback ou assumimos rapidez
+    toggleLoading('request', true);
     try {
         const data = await fetchWithAuth('/api/request-bet', { method: 'POST', body: JSON.stringify({ gameType: appState.currentGame, target }) });
         const c = data.challenge;
@@ -434,7 +448,7 @@ async function handleRequestBet() {
         document.getElementById('request-result-odd').textContent = c.odd.toFixed(2) + 'x';
         
         const addBtn = document.getElementById('request-add-to-slip');
-        // Remove listeners antigos para evitar duplicação
+        // Remove listeners antigos para evitar duplicação (clone)
         const newBtn = addBtn.cloneNode(true);
         addBtn.parentNode.replaceChild(newBtn, addBtn);
         
@@ -494,6 +508,7 @@ function goToRegisterStep(step) {
     [1, 2, 3].forEach(i => {
         const el = document.getElementById(`step-ind-${i}`);
         if (el) {
+            // Cores do novo tema
             el.className = i === step ? 'text-[var(--primary-purple)] font-bold text-xs' : 'text-[var(--text-secondary)] text-xs';
         }
     });
