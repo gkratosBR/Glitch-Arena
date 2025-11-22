@@ -69,14 +69,14 @@ async function fetchWithAuth(endpoint, options = {}) {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> App v5.0 (Cyberpunk Core) Iniciando...");
+    console.log(">>> App v5.2 (Desktop Nav Logic) Iniciando...");
     initTheme();
     initializeMainApp();
     setupAuthListeners();
     setupAppListeners();
 });
 
-// --- LÓGICA DE TEMA (ATUALIZADA) ---
+// --- LÓGICA DE TEMA ---
 function initTheme() {
     const saved = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
@@ -84,7 +84,6 @@ function initTheme() {
     
     const btn = document.getElementById('theme-toggle');
     if(btn) {
-        // Clone para remover listeners antigos e garantir limpeza
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
@@ -205,15 +204,32 @@ function navigateApp(pageId) {
         target.classList.add('active');
     }
     appState.currentAppPage = pageId;
+    
+    // Atualiza Menu Mobile
     document.querySelectorAll('.nav-item').forEach(i => {
         i.classList.toggle('active', i.dataset.page === pageId);
-        // Visual feedback for active tab (using text color change in new design)
         if (i.dataset.page === pageId) {
             i.classList.remove('text-[var(--text-secondary)]');
             i.classList.add('text-[var(--primary-purple)]');
         } else {
             i.classList.add('text-[var(--text-secondary)]');
             i.classList.remove('text-[var(--primary-purple)]');
+        }
+    });
+
+    // Atualiza Menu Desktop
+    document.querySelectorAll('.nav-item-desktop').forEach(i => {
+        const isActive = i.dataset.page === pageId;
+        const indicator = i.querySelector('span'); // A barra inferior
+        
+        if (isActive) {
+            i.classList.remove('text-[var(--text-secondary)]');
+            i.classList.add('text-[var(--primary-purple)]');
+            if(indicator) indicator.classList.replace('scale-x-0', 'scale-x-100');
+        } else {
+            i.classList.add('text-[var(--text-secondary)]');
+            i.classList.remove('text-[var(--primary-purple)]');
+            if(indicator) indicator.classList.replace('scale-x-100', 'scale-x-0');
         }
     });
     
@@ -251,10 +267,20 @@ function setupAppListeners() {
     const logoutBtn = document.getElementById('logout-btn');
     if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     
+    // Menu Mobile (Bottom)
     document.querySelector('.bottom-nav').addEventListener('click', (e) => {
         const btn = e.target.closest('button.nav-item');
         if (btn) navigateApp(btn.dataset.page);
     });
+
+    // Menu Desktop (Top) - NOVA LÓGICA
+    const desktopNav = document.getElementById('desktop-nav');
+    if (desktopNav) {
+        desktopNav.addEventListener('click', (e) => {
+            const btn = e.target.closest('button.nav-item-desktop');
+            if (btn) navigateApp(btn.dataset.page);
+        });
+    }
 
     const lolCard = document.getElementById('select-lol');
     if(lolCard) lolCard.addEventListener('click', () => selectGame('lol'));
@@ -552,7 +578,6 @@ async function fetchAndRenderHistoryBets() {
         list.innerHTML = bets.map(b => {
             const color = b.status === 'won' ? 'green' : (b.status === 'void' ? 'gray' : 'red');
             const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
-            // Tailwind dynamic colors safe-listing might be needed, or use style
             const borderColor = b.status === 'won' ? 'border-green-500' : (b.status === 'void' ? 'border-gray-500' : 'border-red-500');
             const textColor = b.status === 'won' ? 'text-green-500' : (b.status === 'void' ? 'text-gray-500' : 'text-red-500');
             
@@ -994,17 +1019,26 @@ function updateRolloverUI() {
 
 function updateNavbarUI() {
     const userInfo = document.getElementById('nav-user-info');
-    const loginBtn = document.getElementById('auth-login-btn'); // Botão na landing
+    const loginBtn = document.getElementById('auth-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const desktopNav = document.getElementById('desktop-nav');
     
     if (appState.currentUser) {
         userInfo.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
-        if(loginBtn) loginBtn.classList.add('hidden'); // Esconde na landing se existir
+        if(desktopNav) {
+            desktopNav.classList.remove('hidden');
+            desktopNav.classList.add('md:flex');
+        }
+        if(loginBtn) loginBtn.classList.add('hidden');
         document.getElementById('nav-user-name').textContent = appState.currentUser.email.split('@')[0];
     } else {
         userInfo.classList.add('hidden');
         logoutBtn.classList.add('hidden');
+        if(desktopNav) {
+            desktopNav.classList.add('hidden');
+            desktopNav.classList.remove('md:flex');
+        }
         if(loginBtn) loginBtn.classList.remove('hidden');
     }
 }
