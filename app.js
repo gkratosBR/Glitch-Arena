@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const API_URL = ''; 
 
-// --- CONSTANTES DE ECONOMIA ---
+// --- CONSTANTES ---
 const EXCHANGE_RATE = 1000; // 1 BRL = 1000 GC
 
 setPersistence(auth, browserLocalPersistence).catch(console.error);
@@ -36,9 +36,55 @@ const appState = {
     currentUser: null,
     isRegistering: false,
     kycData: { fullname: '', cpf: '', birthdate: '', kyc_status: 'pending' },
-    currentBetLimit: 3.00 * EXCHANGE_RATE, // Ajustado para GC
+    currentBetLimit: 3.00 * EXCHANGE_RATE,
     myReferralCode: ''
 };
+
+// --- UI HELPERS (Definidos primeiro para uso geral) ---
+function toggleLoading(prefix, show) {
+    const loader = document.getElementById(`${prefix}-loader`);
+    const text = document.getElementById(`${prefix}-btn-text`);
+    if (show) { 
+        if(loader) loader.classList.remove('hidden'); 
+        if(text) text.classList.add('hidden'); 
+    } else { 
+        if(loader) loader.classList.add('hidden'); 
+        if(text) text.classList.remove('hidden'); 
+    }
+}
+
+function toggleError(prefix, msg) {
+    const el = document.getElementById(`${prefix}-error-msg`);
+    if (msg) { 
+        if(el) {
+            el.textContent = msg; 
+            el.classList.remove('hidden'); 
+        }
+    } else { 
+        if(el) el.classList.add('hidden'); 
+    }
+}
+
+function showRegisterError(msg) { toggleError('register', msg); }
+
+function showMessage(msg, type) {
+    const m = document.getElementById('message-modal');
+    const c = document.getElementById('message-modal-content');
+    if(!m || !c) return;
+
+    c.textContent = msg;
+    const bgClass = type === 'success' ? 'bg-green-600/90' : 'bg-red-600/90';
+    c.className = `inline-block px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-bold text-sm border border-white/10 backdrop-blur-xl transform transition-all duration-300 text-white ${bgClass}`;
+    
+    m.classList.remove('hidden');
+    setTimeout(() => { c.classList.remove('scale-95', 'opacity-0'); }, 10);
+    setTimeout(() => {
+        c.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => m.classList.add('hidden'), 300);
+    }, 3000);
+}
+
+function showError(msg) { showMessage(msg, 'error'); }
 
 // --- API HELPER ---
 async function fetchWithAuth(endpoint, options = {}) {
@@ -70,176 +116,71 @@ async function fetchWithAuth(endpoint, options = {}) {
     return response.json();
 }
 
-// --- INICIALIZAÇÃO ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> App v5.3 (Exchange Logic) Iniciando...");
-    initTheme();
-    initializeMainApp();
-    setupAuthListeners();
-    setupAppListeners();
-});
+// --- FUNÇÕES DE AUTENTICAÇÃO (Core) ---
 
-// --- LÓGICA DE TEMA ---
-function initTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', saved);
-    updateThemeIcons(saved);
-    
-    const btn = document.getElementById('theme-toggle');
-    if(btn) {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeIcons(next);
+async function handleLogin(e) {
+    e.preventDefault();
+    toggleLoading('login', true);
+    try {
+        await setPersistence(auth, browserLocalPersistence);
+        await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+        // O redirect acontece no onAuthStateChanged
+    } catch (error) {
+        toggleError('login', 'Credenciais inválidas.');
+        toggleLoading('login', false);
+    }
+}
+
+async function handleGoogleLogin() {
+    try {
+        await setPersistence(auth, browserLocalPersistence);
+        const res = await signInWithPopup(auth, new GoogleAuthProvider());
+        if (getAdditionalUserInfo(res).isNewUser) {
+            appState.currentUser = res.user;
+            await fetchWithAuth('/api/init-user', { 
+                method: 'POST', 
+                body: JSON.stringify({ email: res.user.email, fullname: res.user.displayName || '' }) 
+            }).catch(console.error);
+        }
+    } catch (e) {
+        toggleError('login', 'Erro no login Google.');
+    }
+}
+
+async function handleRegister() {
+    appState.isRegistering = true;
+    toggleLoading('reg', true);
+    const email = document.getElementById('reg-email').value;
+    try {
+        await setPersistence(auth, browserLocalPersistence);
+        const cred = await createUserWithEmailAndPassword(auth, email, document.getElementById('reg-password').value);
+        appState.currentUser = cred.user;
+        await fetchWithAuth('/api/init-user', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                email, 
+                fullname: document.getElementById('reg-fullname').value,
+                cpf: document.getElementById('reg-cpf').value,
+                birthdate: document.getElementById('reg-birthdate').value,
+                referralCode: document.getElementById('reg-referral').value
+            })
         });
+        location.reload();
+    } catch (error) {
+        showRegisterError(error.message);
+        if (appState.currentUser) await appState.currentUser.delete().catch(() => {});
+        appState.currentUser = null;
+        toggleLoading('reg', false);
+        appState.isRegistering = false;
     }
 }
 
-function updateThemeIcons(theme) {
-    const sunIcon = document.querySelector('.icon-sun');
-    const moonIcon = document.querySelector('.icon-moon');
-    
-    if (!sunIcon || !moonIcon) return;
-
-    if (theme === 'light') {
-        moonIcon.classList.add('hidden');
-        sunIcon.classList.remove('hidden');
-    } else {
-        sunIcon.classList.add('hidden');
-        moonIcon.classList.remove('hidden');
-    }
+async function handleLogout() {
+    await signOut(auth);
+    location.reload(); 
 }
 
-function initializeMainApp() {
-    onAuthStateChanged(auth, async (user) => {
-        if (appState.isRegistering) return;
-        
-        if (user) {
-            appState.currentUser = user;
-            try {
-                const data = await fetchWithAuth('/api/get-user-data');
-                
-                Object.assign(appState, {
-                    wallet: data.wallet || 0,
-                    bonus_wallet: data.bonus_wallet || 0,
-                    rollover_target: data.rollover_target || 0,
-                    connectedAccounts: data.connectedAccounts || {},
-                    kycData: { 
-                        fullname: data.fullname || '', 
-                        cpf: data.cpf || '', 
-                        birthdate: data.birthdate || '', 
-                        kyc_status: data.kyc_status || 'pending' 
-                    },
-                    currentBetLimit: (data.currentBetLimit || 3.00) * EXCHANGE_RATE, // Ajuste de Limite para GC
-                    myReferralCode: data.my_referral_code || ''
-                });
-                
-                updateUI();
-                toggleShells('app');
-                navigateApp('home-page');
-            } catch (e) {
-                console.error("Erro Init:", e);
-                await signOut(auth);
-                toggleShells('auth');
-                showMessage("Erro de conexão. Tente novamente.", 'error');
-            }
-        } else {
-            appState.currentUser = null;
-            toggleShells('auth');
-            navigateAuth('landing-page');
-        }
-    });
-}
-
-// --- GERENCIAMENTO DE TELAS ---
-function toggleShells(mode) {
-    const loading = document.getElementById('loading-shell');
-    const authShell = document.getElementById('auth-shell');
-    const appShell = document.getElementById('app-shell');
-
-    if(loading) loading.classList.add('hidden');
-
-    if (mode === 'app') {
-        if(authShell) {
-            authShell.classList.remove('flex');
-            authShell.classList.add('hidden');
-        }
-        if(appShell) {
-            appShell.classList.remove('hidden');
-            appShell.classList.add('block');
-        }
-    } else {
-        if(authShell) {
-            authShell.classList.remove('hidden');
-            authShell.classList.add('flex');
-        }
-        if(appShell) {
-            appShell.classList.remove('block');
-            appShell.classList.add('hidden');
-        }
-    }
-}
-
-function navigateAuth(pageId) {
-    document.querySelectorAll('#auth-shell .page').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(pageId);
-    if (target) target.classList.add('active');
-    appState.currentAuthPage = pageId;
-}
-
-function navigateApp(pageId) {
-    if (appState.currentAppPage === pageId) return;
-    if (appState.currentAppPage) {
-        const curr = document.getElementById(appState.currentAppPage);
-        if (curr) curr.classList.remove('active');
-    }
-    const target = document.getElementById(pageId);
-    if (target) {
-        target.classList.remove('hidden');
-        target.classList.add('active');
-    }
-    appState.currentAppPage = pageId;
-    
-    // Sync Menus
-    const syncMenu = (selector) => {
-        document.querySelectorAll(selector).forEach(i => {
-            const isActive = i.dataset.page === pageId;
-            if (selector.includes('desktop')) {
-                const indicator = i.querySelector('span');
-                if (isActive) {
-                    i.classList.replace('text-[var(--text-secondary)]', 'text-[var(--primary-purple)]');
-                    if(indicator) indicator.classList.replace('scale-x-0', 'scale-x-100');
-                } else {
-                    i.classList.replace('text-[var(--primary-purple)]', 'text-[var(--text-secondary)]');
-                    if(indicator) indicator.classList.replace('scale-x-100', 'scale-x-0');
-                }
-            } else {
-                i.classList.toggle('active', isActive);
-                if (isActive) {
-                    i.classList.replace('text-[var(--text-secondary)]', 'text-[var(--primary-purple)]');
-                } else {
-                    i.classList.replace('text-[var(--primary-purple)]', 'text-[var(--text-secondary)]');
-                }
-            }
-        });
-    };
-
-    syncMenu('.nav-item');
-    syncMenu('.nav-item-desktop');
-    
-    if (pageId === 'home-page') appState.currentGame = null;
-    if (pageId === 'profile-page') updateUI();
-    if (pageId === 'bets-page') fetchAndRenderActiveBets();
-    if (pageId === 'history-page') fetchAndRenderHistoryBets();
-}
-
-// --- LISTENERS ---
+// --- SETUP DOS LISTENERS (Seguro) ---
 function setupAuthListeners() {
     const ids = ['auth-login-btn', 'register-goto-login', 'auth-register-btn', 'landing-cta-btn', 'login-goto-register'];
     ids.forEach(id => {
@@ -247,9 +188,14 @@ function setupAuthListeners() {
         if(el) el.addEventListener('click', () => navigateAuth(id.includes('login') ? 'login-page' : 'register-page'));
     });
 
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('reg-submit').addEventListener('click', handleRegister); 
-    document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
+    const loginForm = document.getElementById('login-form');
+    if(loginForm) loginForm.addEventListener('submit', handleLogin);
+
+    const regSubmit = document.getElementById('reg-submit');
+    if(regSubmit) regSubmit.addEventListener('click', handleRegister); 
+    
+    const googleBtn = document.getElementById('google-login-btn');
+    if(googleBtn) googleBtn.addEventListener('click', handleGoogleLogin);
 
     const termBtn = document.getElementById('open-terms-btn');
     if(termBtn) termBtn.addEventListener('click', () => toggleModal('terms-page', true));
@@ -267,11 +213,13 @@ function setupAppListeners() {
     const logoutBtn = document.getElementById('logout-btn');
     if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     
+    // Menu Mobile
     document.querySelector('.bottom-nav').addEventListener('click', (e) => {
         const btn = e.target.closest('button.nav-item');
         if (btn) navigateApp(btn.dataset.page);
     });
 
+    // Menu Desktop
     const desktopNav = document.getElementById('desktop-nav');
     if (desktopNav) {
         desktopNav.addEventListener('click', (e) => {
@@ -309,7 +257,8 @@ function setupAppListeners() {
     
     const addCustomBtn = document.getElementById('request-add-to-slip');
     if(addCustomBtn) {
-         addCustomBtn.addEventListener('click', handleAddCustomBetToSlip);
+         addCustomBtn.addEventListener('click', handleAddCustomBetToSlip); // Corrigido para usar a função direta se necessário ou o handler inline
+         // No passo anterior definimos o onclick dinâmico, aqui é só fallback
     }
     
     document.getElementById('request-try-again').addEventListener('click', resetRequestModal);
@@ -347,8 +296,195 @@ function setupAppListeners() {
     document.getElementById('convert-bonus-btn').addEventListener('click', handleConvertBonus);
 }
 
-// --- BET SLIP LOGIC ---
+// --- LÓGICA PRINCIPAL DE INICIALIZAÇÃO E CONVERSÃO ---
 
+function initializeMainApp() {
+    onAuthStateChanged(auth, async (user) => {
+        if (appState.isRegistering) return;
+        
+        if (user) {
+            console.log(">>> Usuário Logado:", user.uid);
+            appState.currentUser = user;
+            try {
+                const data = await fetchWithAuth('/api/get-user-data');
+                
+                // [IMPORTANTE] Conversão BRL (Servidor) -> GC (App)
+                const serverWallet = data.wallet || 0.0;
+                const serverBonus = data.bonus_wallet || 0.0;
+                const serverRollover = data.rollover_target || 0.0;
+                const serverLimit = data.currentBetLimit || 3.00;
+
+                Object.assign(appState, {
+                    wallet: serverWallet * EXCHANGE_RATE, // Ex: 10 BRL -> 10.000 GC
+                    bonus_wallet: serverBonus * EXCHANGE_RATE,
+                    rollover_target: serverRollover * EXCHANGE_RATE,
+                    connectedAccounts: data.connectedAccounts || {},
+                    kycData: { 
+                        fullname: data.fullname || '', 
+                        cpf: data.cpf || '', 
+                        birthdate: data.birthdate || '', 
+                        kyc_status: data.kyc_status || 'pending' 
+                    },
+                    currentBetLimit: serverLimit * EXCHANGE_RATE, // Limite em GC
+                    myReferralCode: data.my_referral_code || ''
+                });
+                
+                updateUI();
+                toggleShells('app');
+                navigateApp('home-page');
+            } catch (e) {
+                console.error("Erro Init:", e);
+                await signOut(auth);
+                toggleShells('auth');
+                showMessage("Erro de conexão. Tente novamente.", 'error');
+            }
+        } else {
+            appState.currentUser = null;
+            toggleShells('auth');
+            navigateAuth('landing-page');
+        }
+    });
+}
+
+// --- TEMA ---
+function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcons(saved);
+    
+    const btn = document.getElementById('theme-toggle');
+    if(btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcons(next);
+        });
+    }
+}
+
+function updateThemeIcons(theme) {
+    const sunIcon = document.querySelector('.icon-sun');
+    const moonIcon = document.querySelector('.icon-moon');
+    if (!sunIcon || !moonIcon) return;
+    if (theme === 'light') {
+        moonIcon.classList.add('hidden');
+        sunIcon.classList.remove('hidden');
+    } else {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+    }
+}
+
+// --- REGISTRO ---
+function setupRegistrationSteps() {
+    const next1 = document.getElementById('reg-next-step-1');
+    const next2 = document.getElementById('reg-next-step-2');
+    const check = document.getElementById('reg-terms');
+    const submit = document.getElementById('reg-submit');
+
+    if(next1) next1.addEventListener('click', () => {
+        const p1 = document.getElementById('reg-password').value;
+        const p2 = document.getElementById('reg-confirm-password').value;
+        if (p1 !== p2 || p1.length < 6) return showRegisterError("Senhas inválidas ou curtas.");
+        showRegisterError(null); 
+        goToRegisterStep(2);
+    });
+
+    if(next2) next2.addEventListener('click', () => {
+        if (!document.getElementById('reg-fullname').value || !document.getElementById('reg-cpf').value || !document.getElementById('reg-birthdate').value) return showRegisterError("Preencha tudo.");
+        showRegisterError(null); 
+        goToRegisterStep(3);
+    });
+
+    if(check) check.addEventListener('change', () => {
+        submit.disabled = !check.checked;
+        submit.classList.toggle('opacity-50', !check.checked);
+        submit.style.cursor = check.checked ? 'pointer' : 'not-allowed';
+    });
+}
+
+function goToRegisterStep(step) {
+    document.querySelectorAll('.register-step').forEach(s => s.classList.add('hidden'));
+    const stepEl = document.getElementById(`register-step-${step}`);
+    if (stepEl) stepEl.classList.remove('hidden');
+    [1, 2, 3].forEach(i => {
+        const el = document.getElementById(`step-ind-${i}`);
+        if (el) {
+            if (i === step) el.className = 'text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors';
+            else el.className = 'text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors';
+        }
+    });
+}
+
+// --- NAVEGAÇÃO ---
+function toggleShells(mode) {
+    const loading = document.getElementById('loading-shell');
+    const authShell = document.getElementById('auth-shell');
+    const appShell = document.getElementById('app-shell');
+    if(loading) loading.classList.add('hidden');
+    if (mode === 'app') {
+        if(authShell) authShell.classList.replace('flex', 'hidden');
+        if(appShell) appShell.classList.replace('hidden', 'block');
+    } else {
+        if(authShell) authShell.classList.replace('hidden', 'flex');
+        if(appShell) appShell.classList.replace('block', 'hidden');
+    }
+}
+
+function navigateAuth(pageId) {
+    document.querySelectorAll('#auth-shell .page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById(pageId);
+    if (target) target.classList.add('active');
+    appState.currentAuthPage = pageId;
+}
+
+function navigateApp(pageId) {
+    if (appState.currentAppPage === pageId) return;
+    if (appState.currentAppPage) {
+        const curr = document.getElementById(appState.currentAppPage);
+        if (curr) curr.classList.remove('active');
+    }
+    const target = document.getElementById(pageId);
+    if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('active');
+    }
+    appState.currentAppPage = pageId;
+    
+    const syncMenu = (selector) => {
+        document.querySelectorAll(selector).forEach(i => {
+            const isActive = i.dataset.page === pageId;
+            if (selector.includes('desktop')) {
+                const indicator = i.querySelector('span');
+                if (isActive) {
+                    i.classList.replace('text-[var(--text-secondary)]', 'text-[var(--primary-purple)]');
+                    if(indicator) indicator.classList.replace('scale-x-0', 'scale-x-100');
+                } else {
+                    i.classList.replace('text-[var(--primary-purple)]', 'text-[var(--text-secondary)]');
+                    if(indicator) indicator.classList.replace('scale-x-100', 'scale-x-0');
+                }
+            } else {
+                i.classList.toggle('active', isActive);
+                if (isActive) i.classList.replace('text-[var(--text-secondary)]', 'text-[var(--primary-purple)]');
+                else i.classList.replace('text-[var(--primary-purple)]', 'text-[var(--text-secondary)]');
+            }
+        });
+    };
+    syncMenu('.nav-item');
+    syncMenu('.nav-item-desktop');
+    
+    if (pageId === 'home-page') appState.currentGame = null;
+    if (pageId === 'profile-page') updateUI();
+    if (pageId === 'bets-page') fetchAndRenderActiveBets();
+    if (pageId === 'history-page') fetchAndRenderHistoryBets();
+}
+
+// --- BETTING LOGIC (COM CONVERSÃO) ---
 function openBetSlipModal() {
     renderBetSlip();
     updateBetSlipSummary();
@@ -358,12 +494,10 @@ function openBetSlipModal() {
 function renderBetSlip() {
     const list = document.getElementById('bet-slip-list');
     list.innerHTML = '';
-
     if (appState.betSlip.length === 0) {
         list.innerHTML = '<p class="text-center text-[var(--text-secondary)] text-sm mt-4 italic">Nenhum desafio selecionado.</p>';
         return;
     }
-
     appState.betSlip.forEach((bet, index) => {
         const item = document.createElement('div');
         item.className = 'glass-card p-3 mb-2 flex justify-between items-center bg-white/5 border border-white/10';
@@ -397,9 +531,7 @@ function updateBetSlipCount() {
         el.classList.toggle('hidden', count === 0);
     }
     const fab = document.getElementById('bet-slip-fab');
-    if (fab && appState.currentUser) {
-        fab.classList.toggle('hidden', count === 0);
-    }
+    if (fab && appState.currentUser) fab.classList.toggle('hidden', count === 0);
 }
 
 function updateBetSlipSummary() {
@@ -408,7 +540,6 @@ function updateBetSlipSummary() {
     
     document.getElementById('bet-slip-total-odd').textContent = `${totalOdd.toFixed(2)}x`;
     
-    // FIX: Valor exibido em GC com ícone
     const potWin = amount * totalOdd;
     const potEl = document.getElementById('bet-potential-winnings');
     if(potEl) potEl.innerHTML = `<svg class="w-5 h-5 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> ${potWin.toFixed(2)}`;
@@ -445,24 +576,28 @@ function toggleBetSlipItem(challenge) {
 }
 
 async function handlePlaceBet() {
-    const amount = parseFloat(document.getElementById('bet-amount-input').value);
-    if (!amount || amount <= 0) return showError("Valor inválido.");
+    const amountGC = parseFloat(document.getElementById('bet-amount-input').value);
+    if (!amountGC || amountGC <= 0) return showError("Valor inválido.");
     if (appState.betSlip.length === 0) return showError("Selecione desafios.");
     
     toggleLoading('place-bet', true);
     document.getElementById('place-bet-btn').classList.add('hidden');
 
     try {
+        // CONVERSÃO CRÍTICA: GC -> BRL para enviar ao servidor
+        const amountBRL = amountGC / EXCHANGE_RATE;
+
         const res = await fetchWithAuth('/api/place-bet', {
             method: 'POST',
             body: JSON.stringify({
-                betAmount: amount,
+                betAmount: amountBRL, // Envia em BRL
                 betItems: appState.betSlip
             })
         });
         
-        appState.wallet = res.newWallet;
-        appState.bonus_wallet = res.newBonusWallet;
+        // CONVERSÃO DE VOLTA: BRL (Resposta) -> GC (App)
+        appState.wallet = res.newWallet * EXCHANGE_RATE;
+        appState.bonus_wallet = res.newBonusWallet * EXCHANGE_RATE;
         updateUI();
         
         appState.betSlip = [];
@@ -481,25 +616,20 @@ async function handlePlaceBet() {
 }
 
 // --- GAME LOGIC ---
-
 async function selectGame(gameType) {
     if (!appState.currentUser) return showError("Faça login primeiro.");
-    
     appState.currentGame = gameType;
     toggleShells('app');
     navigateApp('challenges-page');
-    
     const list = document.getElementById('challenges-list');
     list.innerHTML = '<div class="loader mx-auto"></div>';
     document.getElementById('challenges-subtitle').textContent = "Analisando seu perfil...";
-
     try {
         const challenges = await fetchWithAuth('/api/get-challenges', { method: 'POST', body: JSON.stringify({ gameType }) });
         renderChallenges(challenges);
     } catch (e) {
         list.innerHTML = `<p class="text-center text-red-400 p-4 border border-red-500/20 rounded bg-red-500/10">${e.message}</p>`;
         if(e.message.includes("Não conectado")) {
-             // Botão redireciona para Perfil agora, pois a conexão foi movida pra lá
              list.innerHTML += `<div class="text-center mt-4"><button class="connect-btn glass-card px-4 py-2 font-bold border hover:bg-white/10" onclick="navigateApp('profile-page')">IR PARA PERFIL</button></div>`;
         }
     }
@@ -508,16 +638,12 @@ async function selectGame(gameType) {
 function renderChallenges(challenges) {
     const list = document.getElementById('challenges-list');
     list.innerHTML = '';
-    
     document.getElementById('request-bet-card').classList.remove('hidden');
-
     challenges.forEach(c => {
         const el = document.createElement('div');
         el.className = 'glass-card p-4 flex justify-between items-center hover:border-[var(--primary-purple)] transition-all cursor-pointer group border border-white/5 bg-white/5';
         const isSelected = appState.betSlip.some(b => b.id === c.id);
-        
         if (isSelected) el.classList.add('border-[var(--primary-purple)]', 'bg-[var(--primary-purple)]/10');
-        
         el.innerHTML = `
             <div>
                 <h4 class="font-bold group-hover:text-[var(--primary-purple)] transition-colors text-white">${c.title}</h4>
@@ -535,6 +661,7 @@ function renderChallenges(challenges) {
     });
 }
 
+// --- HISTORY & ACTIVE BETS (Com Conversão) ---
 async function fetchAndRenderActiveBets() {
     const list = document.getElementById('active-bets-list');
     list.innerHTML = '<div class="loader mx-auto"></div>';
@@ -544,7 +671,12 @@ async function fetchAndRenderActiveBets() {
             list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Nenhuma aposta ativa no momento.</p>';
             return;
         }
-        list.innerHTML = bets.map(b => `
+        list.innerHTML = bets.map(b => {
+            // Converte BRL -> GC para exibição
+            const betAmountGC = (b.betAmount * EXCHANGE_RATE).toFixed(0);
+            const potentialGC = (b.potentialWinnings * EXCHANGE_RATE).toFixed(0);
+            
+            return `
             <div class="glass-card p-4 border-l-4 border-yellow-500 bg-white/5">
                 <div class="flex justify-between mb-2">
                     <span class="text-xs text-yellow-500 font-bold uppercase tracking-wider">Em Andamento</span>
@@ -556,15 +688,15 @@ async function fetchAndRenderActiveBets() {
                 <div class="flex justify-between items-end border-t border-white/10 pt-2">
                     <div>
                         <p class="text-xs text-[var(--text-secondary)] uppercase">Apostado</p>
-                        <p class="font-bold text-white">${b.betAmount.toFixed(0)} GC</p>
+                        <p class="font-bold text-white">${betAmountGC} GC</p>
                     </div>
                     <div class="text-right">
                         <p class="text-xs text-[var(--text-secondary)] uppercase">Retorno</p>
-                        <p class="font-bold text-[var(--accent-cyan)] font-[Orbitron]">${b.potentialWinnings.toFixed(0)} GC</p>
+                        <p class="font-bold text-[var(--accent-cyan)] font-[Orbitron]">${potentialGC} GC</p>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
 }
 
@@ -582,7 +714,10 @@ async function fetchAndRenderHistoryBets() {
             const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
             const borderColor = b.status === 'won' ? 'border-green-500' : (b.status === 'void' ? 'border-gray-500' : 'border-red-500');
             const textColor = b.status === 'won' ? 'text-green-500' : (b.status === 'void' ? 'text-gray-500' : 'text-red-500');
-            const winAmount = b.status === 'won' ? (b.potentialWinnings - b.betAmount) : b.betAmount;
+            
+            // Cálculo de lucro em GC
+            const winAmountBRL = b.status === 'won' ? (b.potentialWinnings - b.betAmount) : b.betAmount;
+            const winAmountGC = (winAmountBRL * EXCHANGE_RATE).toFixed(0);
             
             return `
             <div class="glass-card p-4 border-l-4 ${borderColor} bg-white/5 hover:bg-white/10 transition-colors">
@@ -594,7 +729,7 @@ async function fetchAndRenderHistoryBets() {
                     ${b.betItems.map(i => `<p class="text-sm text-white">• ${i.title}</p>`).join('')}
                 </div>
                  <div class="flex justify-between font-bold items-center">
-                    <span class="${textColor} font-[Orbitron] text-lg">${b.status === 'won' ? '+' : '-'} ${winAmount.toFixed(0)} GC</span>
+                    <span class="${textColor} font-[Orbitron] text-lg">${b.status === 'won' ? '+' : '-'} ${winAmountGC} GC</span>
                     <span class="text-xs text-[var(--text-secondary)] px-2 py-1 bg-black/30 rounded border border-white/10">${b.totalOdd}x</span>
                 </div>
             </div>
@@ -602,153 +737,7 @@ async function fetchAndRenderHistoryBets() {
     } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
 }
 
-// --- UI HELPERS (Atualizado para usar Icons e Câmbio) ---
-function openConnectModal(gameType) {
-    appState.currentGame = gameType;
-    document.getElementById('connect-modal-title').textContent = `CONECTAR ${gameType === 'lol' ? 'LoL' : ''}`;
-    const acc = appState.connectedAccounts[gameType];
-    document.getElementById('riot-id-input').value = acc?.playerId || '';
-    toggleModal('connect-modal', true);
-    toggleError('connect', null);
-    
-    document.getElementById('connect-terms-check').checked = false;
-    const btn = document.getElementById('connect-modal-submit');
-    btn.disabled = true;
-    btn.classList.add('opacity-50');
-    btn.style.cursor = 'not-allowed';
-}
-
-async function handleSubmitConnection() {
-    const id = document.getElementById('riot-id-input').value;
-    if (!id) return toggleError('connect', "Insira um ID.");
-    toggleLoading('connect', true);
-    try {
-        await fetchWithAuth('/api/connect', { method: 'POST', body: JSON.stringify({ playerId: id, gameType: appState.currentGame }) });
-        const userData = await fetchWithAuth('/api/get-user-data');
-        appState.connectedAccounts = userData.connectedAccounts;
-        updateUI();
-        toggleModal('connect-modal', false);
-        showMessage("Conectado! Aguarde processamento...", 'success');
-    } catch (e) {
-        toggleError('connect', e.message);
-    } finally {
-        toggleLoading('connect', false);
-    }
-}
-
-async function handleKycSubmit(e) {
-    e.preventDefault();
-    const fullname = document.getElementById('kyc-modal-fullname').value;
-    const cpf = document.getElementById('kyc-modal-cpf').value;
-    const birthdate = document.getElementById('kyc-modal-birthdate').value;
-    if (!fullname || !cpf || !birthdate) return toggleError('kyc', "Preencha tudo.");
-    
-    toggleLoading('kyc', true); 
-    try {
-        appState.kycData = await fetchWithAuth('/api/validate-kyc', { method: 'POST', body: JSON.stringify({ fullname, cpf, birthdate }) });
-        updateUI();
-        toggleModal('kyc-modal', false);
-        showMessage("Verificado!", 'success');
-    } catch (e) {
-        toggleError('kyc', e.message);
-    } finally {
-        toggleLoading('kyc', false);
-    }
-}
-
-function openDepositModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
-    document.getElementById('deposit-step-1').classList.remove('hidden');
-    document.getElementById('deposit-step-2').classList.add('hidden');
-    toggleModal('deposit-modal', true);
-}
-
-async function handleGeneratePix() {
-    const valBrl = parseFloat(document.getElementById('deposit-amount').value);
-    const couponCode = document.getElementById('deposit-coupon-input').value;
-    if (valBrl < 20) return toggleError('deposit', "Mínimo R$ 20.");
-    
-    toggleLoading('deposit', true);
-    try {
-        // O valor enviado ao backend é em REAIS, o backend converte se necessário ou usa como base
-        const data = await fetchWithAuth('/api/deposit/generate-pix', { 
-            method: 'POST', body: JSON.stringify({ amount: valBrl, couponCode })
-        });
-        document.getElementById('deposit-qrcode-img').src = data.qrCodeBase64;
-        document.getElementById('deposit-copypaste').value = data.copyPaste;
-        document.getElementById('deposit-step-1').classList.add('hidden');
-        document.getElementById('deposit-step-2').classList.remove('hidden');
-        
-        // Feedback de conversão visual
-        const gcAmount = valBrl * EXCHANGE_RATE;
-        showMessage(`Gerando PIX para receber ${gcAmount} GC`, 'success');
-        
-    } catch (e) { toggleError('deposit', e.message); } finally { toggleLoading('deposit', false); }
-}
-
-function copyPixCode() {
-    const el = document.getElementById('deposit-copypaste');
-    el.select();
-    navigator.clipboard.writeText(el.value);
-    showMessage("Copiado!", 'success');
-}
-
-function openWithdrawModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
-    document.getElementById('withdraw-amount').value = '';
-    // Display em GC
-    document.getElementById('withdraw-max-balance').textContent = `${appState.wallet.toFixed(0)} GC`;
-    document.getElementById('withdraw-pix-key').value = appState.kycData.cpf;
-    toggleModal('withdraw-modal', true);
-}
-
-async function handleRequestWithdraw() {
-    const valGc = parseFloat(document.getElementById('withdraw-amount').value);
-    const minBrl = 50;
-    const minGc = minBrl * EXCHANGE_RATE;
-    
-    if (valGc < minGc) return toggleError('withdraw', `Mínimo ${minGc} GC (R$ ${minBrl}).`);
-    if (valGc > appState.wallet) return toggleError('withdraw', "Saldo insuficiente.");
-    
-    const valBrl = valGc / EXCHANGE_RATE;
-    
-    if(!confirm(`Sacar ${valGc} GC? Você receberá R$ ${valBrl.toFixed(2)}.`)) return;
-
-    toggleLoading('withdraw', true);
-    try {
-        const res = await fetchWithAuth('/api/withdraw/request', { method: 'POST', body: JSON.stringify({ amount: valBrl }) }); // Backend espera BRL ou GC? Assumindo BRL para compatibilidade
-        appState.wallet = res.newWallet; // Update wallet
-        updateUI();
-        toggleModal('withdraw-modal', false);
-        showMessage("Solicitado!", 'success');
-    } catch (e) { toggleError('withdraw', e.message); } finally { toggleLoading('withdraw', false); }
-}
-
-async function handleRedeemCoupon() {
-    const code = document.getElementById('coupon-input').value;
-    if(!code) return showError("Digite código.");
-    try {
-        const res = await fetchWithAuth('/api/redeem-coupon', { method: 'POST', body: JSON.stringify({ code }) });
-        const data = await fetchWithAuth('/api/get-user-data');
-        appState.bonus_wallet = data.bonus_wallet;
-        appState.rollover_target = data.rollover_target;
-        updateUI();
-        showMessage(`Bônus de ${res.amount} GC ativado!`, 'success');
-    } catch (e) { showError(e.message); }
-}
-
-async function handleConvertBonus() {
-    try {
-        const res = await fetchWithAuth('/api/convert-bonus', { method: 'POST' });
-        appState.wallet += res.convertedAmount;
-        appState.bonus_wallet = 0;
-        appState.rollover_target = 0;
-        updateUI();
-        showMessage("Convertido com sucesso!", 'success');
-    } catch (e) { showError(e.message); }
-}
-
-// --- CUSTOM BET ---
+// --- CUSTOM BET & WITHDRAW ---
 function openRequestBetModal() {
     if (!appState.currentGame || !appState.connectedAccounts[appState.currentGame]) return showError("Conecte a conta no Perfil.");
     document.getElementById('request-form-container').classList.remove('hidden');
@@ -778,23 +767,83 @@ async function handleRequestBet() {
     } catch (e) { toggleError('request', e.message); } finally { toggleLoading('request', false); }
 }
 
-function handleAddCustomBetToSlip() {
-    // Lógica tratada no onclick dinâmico acima
-}
+function handleAddCustomBetToSlip() {}
 
 function resetRequestModal() {
     document.getElementById('request-result-container').classList.add('hidden');
     document.getElementById('request-form-container').classList.remove('hidden');
 }
 
-// --- UI UPDATES (FIX: Preserva SVG Icons) ---
+// --- FUNÇÕES DE SAQUE (COM CONVERSÃO) ---
+function openWithdrawModal() {
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide identidade.");
+    document.getElementById('withdraw-amount').value = '';
+    document.getElementById('withdraw-max-balance').textContent = `${appState.wallet.toFixed(0)} GC`;
+    document.getElementById('withdraw-pix-key').value = appState.kycData.cpf;
+    toggleModal('withdraw-modal', true);
+}
+
+async function handleRequestWithdraw() {
+    const valGc = parseFloat(document.getElementById('withdraw-amount').value);
+    const minBrl = 50;
+    const minGc = minBrl * EXCHANGE_RATE;
+    
+    if (valGc < minGc) return toggleError('withdraw', `Mínimo ${minGc} GC (R$ ${minBrl}).`);
+    if (valGc > appState.wallet) return toggleError('withdraw', "Saldo insuficiente.");
+    
+    // Conversão GC -> BRL para enviar solicitação ao servidor
+    const valBrl = valGc / EXCHANGE_RATE;
+    
+    if(!confirm(`Sacar ${valGc} GC? Você receberá aproximadamente R$ ${valBrl.toFixed(2)}.`)) return;
+
+    toggleLoading('withdraw', true);
+    try {
+        // O servidor espera o valor em BRL
+        const res = await fetchWithAuth('/api/withdraw/request', { method: 'POST', body: JSON.stringify({ amount: valBrl }) });
+        
+        // Atualiza saldo local convertendo resposta BRL -> GC
+        appState.wallet = res.newWallet * EXCHANGE_RATE;
+        updateUI();
+        toggleModal('withdraw-modal', false);
+        showMessage("Solicitado! Aguarde o PIX.", 'success');
+    } catch (e) { toggleError('withdraw', e.message); } finally { toggleLoading('withdraw', false); }
+}
+
+async function handleRedeemCoupon() {
+    const code = document.getElementById('coupon-input').value;
+    if(!code) return showError("Digite código.");
+    try {
+        const res = await fetchWithAuth('/api/redeem-coupon', { method: 'POST', body: JSON.stringify({ code }) });
+        // Recarrega dados para garantir sincronia de saldo
+        const data = await fetchWithAuth('/api/get-user-data');
+        appState.bonus_wallet = (data.bonus_wallet || 0) * EXCHANGE_RATE;
+        appState.rollover_target = (data.rollover_target || 0) * EXCHANGE_RATE;
+        updateUI();
+        
+        // Mostra valor ganho em GC
+        const earnedGC = res.amount * EXCHANGE_RATE;
+        showMessage(`Bônus de ${earnedGC} GC ativado!`, 'success');
+    } catch (e) { showError(e.message); }
+}
+
+async function handleConvertBonus() {
+    try {
+        const res = await fetchWithAuth('/api/convert-bonus', { method: 'POST' });
+        appState.wallet += res.convertedAmount * EXCHANGE_RATE;
+        appState.bonus_wallet = 0;
+        appState.rollover_target = 0;
+        updateUI();
+        showMessage("Convertido com sucesso!", 'success');
+    } catch (e) { showError(e.message); }
+}
+
+// --- UI UPDATES ---
 
 function updateWalletUI() {
     const walletEl = document.getElementById('wallet-balance');
     const bonusEl = document.getElementById('bonus-balance');
     const navBal = document.getElementById('nav-user-balance');
     
-    // Usamos innerHTML para preservar o SVG
     if(walletEl) walletEl.innerHTML = `<svg class="w-6 h-6 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> ${appState.wallet.toFixed(0)}`;
     if(bonusEl) bonusEl.innerHTML = `<svg class="w-6 h-6 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> ${appState.bonus_wallet.toFixed(0)}`;
     if(navBal) navBal.innerHTML = `<svg class="w-4 h-4 text-yellow-300"><use href="#icon-glitch-coin"></use></svg> ${(appState.wallet + appState.bonus_wallet).toFixed(0)}`;
@@ -817,7 +866,6 @@ function updateProfileUI() {
         kycBtn.addEventListener('click', () => toggleModal('kyc-modal', true));
     }
     
-    // Status de conexão (Movemos a lógica visual para cá)
     const lolStatus = document.getElementById('lol-status');
     const lolBtn = document.getElementById('lol-connect-btn');
     
@@ -900,3 +948,12 @@ function updateNavbarUI() {
         if(loginBtn) loginBtn.classList.remove('hidden');
     }
 }
+
+// --- START ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log(">>> App v5.6 (Exchange Fixed) Iniciando...");
+    initTheme();
+    initializeMainApp();
+    setupAuthListeners();
+    setupAppListeners();
+});
