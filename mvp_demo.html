@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- VERSÃO 3.1: Com Aviso Alpha -->
-    <link rel="stylesheet" href="style.css?v=3.1">
+    <!-- VERSÃO 3.3: Fix Final Termos Modal -->
+    <link rel="stylesheet" href="style.css?v=3.3">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-[#0a090c] text-white font-[Poppins] pt-8"> <!-- Adicionei pt-8 para compensar o banner -->
@@ -71,15 +71,12 @@
         <!-- Login Page -->
         <div id="login-page" class="page hidden w-full max-w-md relative z-10">
             <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 relative overflow-hidden">
-                <!-- Faixa Alpha no Card -->
                 <div class="absolute top-0 right-0 bg-yellow-600 text-[10px] px-3 py-1 font-bold rounded-bl-lg">v0.3</div>
-                
                 <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
                 <form id="login-form" class="space-y-4">
                     <p id="login-error-msg" class="text-red-400 text-sm text-center hidden"></p>
                     <input type="email" id="login-email" class="form-input" placeholder="E-mail" required>
                     <input type="password" id="login-password" class="form-input" placeholder="Senha" required>
-                    
                     <button type="submit" id="login-submit-btn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-lg hover:opacity-90 transition flex justify-center">
                         <span id="login-btn-text">Entrar</span>
                         <div id="login-loader" class="loader w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></div>
@@ -89,9 +86,7 @@
                     <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
                     <span class="relative bg-[#131316] px-2 text-sm text-gray-400">OU</span>
                 </div>
-                <button id="google-login-btn" class="w-full bg-white text-black font-bold py-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition">
-                    Google
-                </button>
+                <button id="google-login-btn" class="w-full bg-white text-black font-bold py-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition">Google</button>
                 <p class="text-center text-sm text-gray-400 mt-6">Novo? <button id="login-goto-register" class="text-purple-400 font-semibold hover:underline">Criar conta</button></p>
             </div>
         </div>
@@ -100,23 +95,19 @@
         <div id="register-page" class="page hidden w-full max-w-md relative z-10">
             <div class="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10">
                 <h2 class="text-2xl font-bold text-center mb-6">Criar Conta</h2>
-                
                 <div class="flex justify-between mb-6 px-2">
                     <span id="step-ind-1" class="text-xs font-bold text-purple-400">1. Acesso</span>
                     <span id="step-ind-2" class="text-xs font-bold text-gray-600">2. Pessoal</span>
                     <span id="step-ind-3" class="text-xs font-bold text-gray-600">3. Confirmar</span>
                 </div>
-
                 <form id="register-form" class="space-y-4">
                     <p id="register-error-msg" class="text-red-400 text-sm text-center hidden"></p>
-                    
                     <div id="register-step-1" class="register-step">
                         <input type="email" id="reg-email" class="form-input" placeholder="E-mail" required>
                         <input type="password" id="reg-password" class="form-input" placeholder="Senha (min 6)" required>
                         <input type="password" id="reg-confirm-password" class="form-input" placeholder="Confirmar Senha" required>
                         <button type="button" id="reg-next-step-1" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-500 transition">Próximo</button>
                     </div>
-
                     <div id="register-step-2" class="register-step hidden">
                         <input type="text" id="reg-fullname" class="form-input" placeholder="Nome Completo" required>
                         <input type="text" id="reg-cpf" class="form-input" placeholder="CPF (só números)" required>
@@ -124,7 +115,6 @@
                         <input type="text" id="reg-referral" class="form-input uppercase tracking-widest" placeholder="Cód. Convite (Opcional)">
                         <button type="button" id="reg-next-step-2" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-500 transition">Próximo</button>
                     </div>
-
                     <div id="register-step-3" class="register-step hidden">
                         <div class="bg-red-500/10 border border-red-500/30 p-3 rounded mb-4 text-xs text-red-200">
                             <p>• Proibido Smurf/Elojob.</p>
@@ -144,23 +134,37 @@
             </div>
         </div>
 
-        <!-- Terms Page -->
-        <div id="terms-page" class="page hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+        <!-- TERMS PAGE (MODAL CORRIGIDO - SEM CLASSE 'PAGE') -->
+        <div id="terms-page" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
             <div class="bg-[#1a1a1e] w-full max-w-2xl rounded-2xl border border-white/10 flex flex-col shadow-2xl max-h-[85vh]">
                 <div class="flex justify-between items-center p-6 border-b border-white/10">
-                    <h2 class="text-xl font-bold">Termos de Uso</h2>
-                    <button id="close-terms-btn" class="text-2xl">&times;</button>
+                    <h2 class="text-xl font-bold text-white">Termos de Uso</h2>
+                    <button id="close-terms-btn" class="text-2xl text-gray-400 hover:text-white">&times;</button>
                 </div>
                 <div class="flex-grow overflow-y-auto p-6 text-sm text-gray-300 space-y-4 custom-scroll">
-                    <p>1. Ao usar o Glitch Arena, você concorda com as regras de Fair Play.</p>
-                    <p>2. Smurfing resulta em banimento imediato sem reembolso.</p>
-                    <p>3. O saldo é virtual e a conversão depende da aprovação do sistema.</p>
+                    <section>
+                        <h3 class="font-bold text-white mb-2">1. Aceitação</h3>
+                        <p>Ao usar o Glitch Arena, você concorda integralmente com estes termos.</p>
+                    </section>
+                    <section>
+                        <h3 class="font-bold text-white mb-2">2. Fair Play</h3>
+                        <p>O uso de contas Smurf, Elojob ou qualquer forma de manipulação de resultado ("Deranking") resultará no bloqueio imediato da conta e retenção do saldo.</p>
+                    </section>
+                    <section>
+                        <h3 class="font-bold text-white mb-2">3. Natureza do Serviço</h3>
+                        <p>O Glitch Arena é uma plataforma de Skill-based Gaming (Competição de Habilidade), não se configurando como jogo de azar puro.</p>
+                    </section>
+                    <section>
+                        <h3 class="font-bold text-white mb-2">4. Financeiro</h3>
+                        <p>Saques estão sujeitos a verificação de identidade (KYC) e cumprimento de regras de Rollover (apostar o valor depositado pelo menos 1x).</p>
+                    </section>
                 </div>
                 <div class="p-4 border-t border-white/10 text-center">
-                    <button id="terms-ok-btn" class="bg-purple-600 px-8 py-3 rounded-lg font-bold text-white w-full">Entendi</button>
+                    <button id="terms-ok-btn" class="bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-lg font-bold text-white w-full transition">Li e Concordo</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- APP SHELL -->
@@ -170,7 +174,6 @@
         <div id="home-page" class="page">
             <h1 class="text-3xl font-bold mb-6">Arena de Jogos <span class="text-xs font-normal text-yellow-500 border border-yellow-500 px-2 py-1 rounded-full ml-2 align-middle">ALPHA</span></h1>
             
-            <!-- Aviso Interno -->
             <div class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-6 flex items-start gap-3">
                 <span class="text-xl">🚧</span>
                 <div>
@@ -197,9 +200,7 @@
             <button id="back-to-home" class="text-gray-400 hover:text-white mb-4 text-sm">← Voltar</button>
             <h1 id="challenges-title" class="text-2xl font-bold mb-1">Desafios</h1>
             <p id="challenges-subtitle" class="text-xs text-gray-400 mb-6">Conecte sua conta...</p>
-            
             <div id="challenges-list" class="space-y-3"></div>
-            
             <div id="request-bet-card" class="hidden mt-8 p-6 border border-dashed border-white/20 rounded-xl text-center">
                 <h3 class="font-bold mb-1">Crie seu Desafio</h3>
                 <p class="text-xs text-gray-400 mb-3">Defina sua própria meta.</p>
@@ -207,24 +208,11 @@
             </div>
         </div>
 
-        <!-- Outras Páginas -->
-        <div id="bets-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-6">Ativas</h1>
-            <div id="active-bets-list" class="space-y-3"></div>
-        </div>
-
-        <div id="history-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-6">Histórico</h1>
-            <div id="history-bets-list" class="space-y-3"></div>
-        </div>
-
+        <!-- Outras Páginas (Bets, History, Profile) -->
+        <div id="bets-page" class="page hidden"><h1 class="text-2xl font-bold mb-6">Ativas</h1><div id="active-bets-list" class="space-y-3"></div></div>
+        <div id="history-page" class="page hidden"><h1 class="text-2xl font-bold mb-6">Histórico</h1><div id="history-bets-list" class="space-y-3"></div></div>
         <div id="profile-page" class="page hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold">Perfil</h1>
-                <button id="logout-btn" class="text-xs bg-white/10 px-3 py-1 rounded">Sair</button>
-            </div>
-            
-            <!-- Wallet -->
+            <div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Perfil</h1><button id="logout-btn" class="text-xs bg-white/10 px-3 py-1 rounded">Sair</button></div>
             <div class="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-white/10 p-6 rounded-2xl mb-6">
                 <div class="flex justify-between items-end mb-6">
                     <div><p class="text-xs text-gray-300">Saldo Real</p><h2 id="wallet-balance" class="text-3xl font-bold">GC 0.00</h2></div>
@@ -235,15 +223,11 @@
                     <button id="open-withdraw-modal" class="bg-white/10 hover:bg-white/20 py-2 rounded text-sm font-bold">Sacar</button>
                 </div>
             </div>
-
-            <!-- Rollover -->
             <div id="rollover-container" class="bg-white/5 border border-white/10 p-4 rounded-xl mb-6 hidden">
                 <div class="flex justify-between text-sm mb-2"><span class="text-gray-400">Rollover</span><span id="rollover-text" class="font-bold text-purple-400">GC 0.00</span></div>
                 <div class="w-full bg-gray-800 rounded-full h-2 mb-3"><div id="rollover-bar" class="bg-purple-600 h-2 rounded-full" style="width:0%"></div></div>
                 <button id="convert-bonus-btn" class="w-full bg-gray-700 text-xs py-2 rounded" disabled>Converter Bônus</button>
             </div>
-
-            <!-- Coupon -->
             <div class="bg-white/5 p-4 rounded-xl mb-4">
                 <h3 class="text-sm font-bold mb-3">Cupons</h3>
                 <div class="flex gap-2">
@@ -255,8 +239,6 @@
                     <p id="my-referral-code" class="text-lg font-bold tracking-widest cursor-pointer">---</p>
                 </div>
             </div>
-
-            <!-- KYC & Connect -->
             <div class="space-y-4">
                 <div class="bg-white/5 p-4 rounded-xl">
                     <div class="flex justify-between"><h3 class="font-bold text-sm">Identidade</h3><span id="kyc-status" class="text-[10px] bg-gray-700 px-2 rounded py-0.5">PENDENTE</span></div>
@@ -264,7 +246,6 @@
                     <div id="kyc-loading" class="hidden text-xs text-gray-500">Carregando...</div>
                     <button id="kyc-verify-btn" class="mt-3 w-full bg-blue-600/80 py-2 rounded text-xs hidden">Validar</button>
                 </div>
-
                 <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-purple-900 rounded flex items-center justify-center font-bold text-xs">L</div>
@@ -275,7 +256,7 @@
             </div>
         </div>
 
-        <!-- Bottom Navigation -->
+        <!-- Bottom Nav -->
         <nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-[#0a090c]/95 border-t border-white/5 p-2 pb-6 z-40 backdrop-blur-md">
             <div class="max-w-2xl mx-auto flex justify-around">
                 <button data-page="home-page" class="nav-item active flex flex-col items-center p-2"><span class="text-lg">🏠</span><span class="text-[10px]">Início</span></button>
@@ -296,38 +277,11 @@
 
     <!-- Modals -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 z-50 backdrop-blur-sm"></div>
+    
+    <div id="deposit-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto shadow-2xl"><h3 class="font-bold text-lg mb-4">Depositar</h3><div id="deposit-step-1"><input type="number" id="deposit-amount" class="form-input" placeholder="R$ (Min 20)"><div class="flex gap-2 mb-4"><button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="20">20</button><button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="50">50</button><button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="100">100</button></div><input type="text" id="deposit-coupon-input" class="form-input uppercase" placeholder="CUPOM"><p id="deposit-error-msg" class="text-red-400 text-xs hidden mb-2"></p><div class="flex justify-end gap-2"><button id="deposit-modal-cancel" class="text-xs text-gray-400 px-4">Cancelar</button><button id="deposit-confirm-btn" class="bg-green-600 px-6 py-2 rounded text-sm font-bold">Gerar PIX</button></div><div id="deposit-loader" class="hidden text-center mt-2"><div class="loader w-4 h-4 inline-block"></div></div></div><div id="deposit-step-2" class="hidden text-center"><img id="deposit-qrcode-img" class="mx-auto w-40 rounded mb-4"><div class="flex bg-black/30 p-2 rounded mb-4"><input id="deposit-copypaste" class="bg-transparent w-full text-xs truncate" readonly><button id="deposit-copy-btn" class="text-purple-400 font-bold text-xs ml-2">COPIAR</button></div><button id="deposit-finish-btn" class="w-full bg-gray-700 py-2 rounded font-bold">Fechar</button></div></div></div>
 
-    <!-- Deposit Modal -->
-    <div id="deposit-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
-        <div class="bg-[#1a1a1e] border border-white/10 w-full max-w-sm rounded-2xl p-6 pointer-events-auto shadow-2xl">
-            <h3 class="font-bold text-lg mb-4">Depositar</h3>
-            <div id="deposit-step-1">
-                <input type="number" id="deposit-amount" class="form-input" placeholder="R$ (Min 20)">
-                <div class="flex gap-2 mb-4">
-                    <button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="20">20</button>
-                    <button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="50">50</button>
-                    <button class="deposit-preset-btn flex-1 bg-white/5 py-2 rounded text-xs" data-value="100">100</button>
-                </div>
-                <input type="text" id="deposit-coupon-input" class="form-input uppercase" placeholder="CUPOM">
-                <p id="deposit-error-msg" class="text-red-400 text-xs hidden mb-2"></p>
-                <div class="flex justify-end gap-2">
-                    <button id="deposit-modal-cancel" class="text-xs text-gray-400 px-4">Cancelar</button>
-                    <button id="deposit-confirm-btn" class="bg-green-600 px-6 py-2 rounded text-sm font-bold">Gerar PIX</button>
-                </div>
-                <div id="deposit-loader" class="hidden text-center mt-2"><div class="loader w-4 h-4 inline-block"></div></div>
-            </div>
-            <div id="deposit-step-2" class="hidden text-center">
-                <img id="deposit-qrcode-img" class="mx-auto w-40 rounded mb-4">
-                <div class="flex bg-black/30 p-2 rounded mb-4">
-                    <input id="deposit-copypaste" class="bg-transparent w-full text-xs truncate" readonly>
-                    <button id="deposit-copy-btn" class="text-purple-400 font-bold text-xs ml-2">COPIAR</button>
-                </div>
-                <button id="deposit-finish-btn" class="w-full bg-gray-700 py-2 rounded font-bold">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Outros Modais -->
+    <!-- Outros Modais (Withdraw, Connect, KYC, BetSlip, Request) -->
+    <!-- (Mantive os modais simplificados aqui para economizar linhas, mas funcionais com o JS) -->
     <div id="withdraw-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 class="font-bold mb-2">Sacar</h3><input id="withdraw-amount" class="form-input" placeholder="Qtd GC"><p class="text-xs text-right mb-2 text-gray-400">Max: <span id="withdraw-max-balance">0</span></p><input id="withdraw-pix-key" class="form-input bg-gray-800" readonly><p id="withdraw-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2"><button id="withdraw-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button id="withdraw-confirm-btn" class="bg-purple-600 px-4 py-2 rounded text-sm font-bold">Solicitar</button></div><div id="withdraw-loader" class="hidden text-center"><div class="loader w-4 h-4 inline-block"></div></div></div></div>
     <div id="connect-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 id="connect-modal-title" class="font-bold mb-4">Conectar</h3><input id="riot-id-input" class="form-input" placeholder="Riot ID"><div class="flex items-center mb-4"><input type="checkbox" id="connect-terms-check" class="mr-2"><label for="connect-terms-check" class="text-xs text-gray-400">Confirmar vínculo</label></div><p id="connect-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2"><button id="connect-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button id="connect-modal-submit" class="bg-purple-600 px-4 py-2 rounded text-sm font-bold opacity-50" disabled>Conectar</button></div><div id="connect-loader" class="hidden text-center"><div class="loader w-4 h-4 inline-block"></div></div></div></div>
     <div id="kyc-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"><div class="bg-[#1a1a1e] w-full max-w-sm rounded-2xl p-6 pointer-events-auto border border-white/10"><h3 class="font-bold mb-4">Dados Pessoais</h3><form id="kyc-form"><input id="kyc-modal-fullname" class="form-input" placeholder="Nome"><input id="kyc-modal-cpf" class="form-input" placeholder="CPF"><input type="date" id="kyc-modal-birthdate" class="form-input"><p id="kyc-error-msg" class="text-red-400 text-xs hidden"></p><div class="flex justify-end gap-2 mt-2"><button type="button" id="kyc-modal-cancel" class="text-xs text-gray-400">Cancelar</button><button type="submit" id="kyc-modal-submit" class="bg-blue-600 px-4 py-2 rounded text-sm font-bold">Salvar</button></div></form></div></div>
@@ -337,7 +291,7 @@
     <!-- Toast -->
     <div id="message-modal" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[70]"><div id="message-modal-content" class="px-6 py-3 rounded-full shadow-2xl font-bold text-sm"></div></div>
 
-    <!-- JS V3.0 -->
-    <script type="module" src="app.js?v=3.1"></script>
+    <!-- JS V3.3 -->
+    <script type="module" src="app.js?v=3.3"></script>
 </body>
 </html>

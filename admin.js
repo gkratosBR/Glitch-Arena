@@ -35,16 +35,13 @@ async function fetchWithAdminAuth(endpoint, options = {}) {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Listeners de Auth
     document.getElementById('admin-login-form').addEventListener('submit', handleAdminLogin);
     document.getElementById('admin-logout-btn').addEventListener('click', () => signOut(auth));
     
-    // Listeners dos Sliders Matemáticos (Atualiza o % ao lado)
     setupSliderListener('config-min-difficulty', 'val-min-difficulty', '%');
     setupSliderListener('config-max-difficulty', 'val-max-difficulty', '%');
     setupSliderListener('config-safety-reduction', 'val-safety', '%');
 
-    // Monitor de Sessão
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
@@ -66,9 +63,7 @@ function setupSliderListener(inputId, displayId, suffix) {
     const input = document.getElementById(inputId);
     const display = document.getElementById(displayId);
     if(input && display) {
-        // Atualiza ao carregar
         display.textContent = input.value + suffix;
-        // Atualiza ao mover
         input.addEventListener('input', (e) => display.textContent = e.target.value + suffix);
     }
 }
@@ -94,10 +89,9 @@ function showAdminPanel(user) {
     document.getElementById('admin-panel-shell').classList.remove('hidden');
     
     loadDashboardData();
-    loadAdvancedStats(); // Carrega o painel "Raio-X"
+    loadAdvancedStats();
     loadConfigData();
     
-    // Listeners de Ação
     document.getElementById('config-form').addEventListener('submit', handleSaveConfig);
     document.getElementById('create-coupon-form').addEventListener('submit', handleCreateCoupon);
     document.getElementById('search-user-btn').addEventListener('click', handleSearchUser);
@@ -133,18 +127,16 @@ async function loadDashboardData() {
     } catch (e) { console.error(e); }
 }
 
-// --- ADVANCED STATS (RAIO-X) ---
+// --- ADVANCED STATS ---
 async function loadAdvancedStats() {
     try {
         const data = await fetchWithAdminAuth('/api/admin/advanced-stats');
         
-        // Cria ou atualiza o painel de estatísticas avançadas
         let container = document.getElementById('advanced-stats-panel');
         if (!container) {
             container = document.createElement('div');
             container.id = 'advanced-stats-panel';
             container.className = 'glass-card p-6 mt-6 border border-blue-500/20 col-span-1 lg:col-span-3';
-            // Injeta logo após o grid de KPIs
             const kpiGrid = document.querySelector('main > div.lg\\:col-span-2 > div.grid');
             if (kpiGrid && kpiGrid.parentNode) {
                 kpiGrid.parentNode.insertBefore(container, kpiGrid.nextSibling);
@@ -191,24 +183,20 @@ async function loadAdvancedStats() {
     } catch (e) { console.error("Erro Advanced Stats:", e); }
 }
 
-
-// --- CONFIGURATIONS (LOAD & SAVE) ---
+// --- CONFIGURATIONS ---
 async function loadConfigData() {
     try {
         const c = await fetchWithAdminAuth('/api/admin/get-config');
         const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val !== undefined ? val : ''; };
 
-        // 1. Margens e Taxas Financeiras
         setVal('config-margin-main', (c.margins?.main * 100).toFixed(0));
         setVal('config-margin-stats', (c.margins?.stats * 100).toFixed(0));
-        
         setVal('config-min-deposit', c.payment?.min_deposit);
         setVal('config-min-withdrawal', c.payment?.min_withdrawal);
         setVal('config-withdraw-fee', c.payment?.withdraw_fee);
         setVal('config-free-withdraw-threshold', c.payment?.free_withdraw_threshold);
         setVal('config-fee-behavior', c.payment?.fee_payer || 'user');
 
-        // 2. Matemática Avançada (Ranges de Dificuldade)
         const minDiff = (c.math?.min_difficulty || 0.25) * 100;
         const maxDiff = (c.math?.max_difficulty || 0.65) * 100;
         const safeReduct = (c.math?.safety_reduction || 0.10) * 100;
@@ -217,17 +205,13 @@ async function loadConfigData() {
         setVal('config-max-difficulty', maxDiff);
         setVal('config-safety-reduction', safeReduct);
         
-        // Atualiza os textos dos sliders
         document.getElementById('val-min-difficulty').textContent = minDiff.toFixed(0) + '%';
         document.getElementById('val-max-difficulty').textContent = maxDiff.toFixed(0) + '%';
         document.getElementById('val-safety').textContent = safeReduct.toFixed(0) + '%';
 
-        // 3. Sistema de Indicação (Referral)
         setVal('config-referrer-amount', c.referral?.referrer_amount);
         setVal('config-referee-amount', c.referral?.referee_amount);
         setVal('config-rollover-multiplier', c.referral?.rollover_multiplier);
-
-        // 4. Sistema e Integrações (Gateway / Riot)
         setVal('config-suitpay-client-id', c.payment_gateway?.client_id);
         setVal('config-suitpay-client-secret', c.payment_gateway?.client_secret);
         setVal('config-min-level', c.risk?.min_summoner_level);
@@ -247,7 +231,6 @@ async function handleSaveConfig(e) {
         const getVal = (id, def) => { const el = document.getElementById(id); return el && el.value ? parseFloat(el.value) : def; };
         const getStr = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
 
-        // Objeto de Configuração Completo
         const newConfig = {
             margins: {
                 main: getVal('config-margin-main', 15) / 100,
@@ -261,7 +244,6 @@ async function handleSaveConfig(e) {
                 fee_payer: getStr('config-fee-behavior') || 'user'
             },
             math: {
-                // Salva os intervalos Mínimo e Máximo
                 min_difficulty: getVal('config-min-difficulty', 25) / 100,
                 max_difficulty: getVal('config-max-difficulty', 65) / 100,
                 safety_reduction: getVal('config-safety-reduction', 10) / 100
@@ -297,7 +279,7 @@ async function handleSaveConfig(e) {
     }
 }
 
-// --- CUPONS ---
+// --- CUPONS (CORRIGIDO: Parse de Tipos) ---
 async function handleCreateCoupon(e) {
     e.preventDefault();
     const btn = document.getElementById('create-coupon-btn');
@@ -307,11 +289,12 @@ async function handleCreateCoupon(e) {
     btn.innerHTML = "Criando...";
     resDiv.classList.add('hidden');
 
+    // FIX: Converte strings para números antes de enviar
     const payload = {
         code: document.getElementById('coupon-code').value,
-        amount: document.getElementById('coupon-amount').value,
-        min_deposit_required: document.getElementById('coupon-min-deposit').value,
-        max_uses: document.getElementById('coupon-max-uses').value
+        amount: parseFloat(document.getElementById('coupon-amount').value) || 0,
+        min_deposit_required: parseFloat(document.getElementById('coupon-min-deposit').value) || 0,
+        max_uses: parseInt(document.getElementById('coupon-max-uses').value) || 0
     };
 
     try {
@@ -331,7 +314,7 @@ async function handleCreateCoupon(e) {
     }
 }
 
-// --- BUSCA DE USUÁRIO + ANALYTICS VISUAL ---
+// --- BUSCA DE USUÁRIO ---
 async function handleSearchUser() {
     const email = document.getElementById('search-user-email').value;
     const res = document.getElementById('search-user-result');
@@ -344,7 +327,6 @@ async function handleSearchUser() {
     try {
         const u = await fetchWithAdminAuth(`/api/admin/find-user?email=${email}`);
         
-        // Monta a "Ficha Técnica" Matemática se disponível
         let analyticsHtml = '';
         if (u.analytics) {
             analyticsHtml = `
@@ -400,7 +382,6 @@ async function handleSearchUser() {
     }
 }
 
-// --- GRÁFICO ---
 function renderRevenueChart(data) {
     const ctx = document.getElementById('revenue-chart').getContext('2d');
     if (revenueChart) revenueChart.destroy();
