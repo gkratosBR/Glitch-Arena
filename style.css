@@ -1,95 +1,151 @@
-/* Estilos Globais e Reset Básico */
-html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    scroll-behavior: smooth;
+/* =========================================
+   GLITCH ARENA - TEMA V4.0 (Cyberpunk)
+   ========================================= */
+
+   :root {
+    /* --- PALETA CORE --- */
+    --primary-blue: #3F5EFB;
+    --primary-purple: #7F41FF;
+    --accent-orange: #FC466B;
+    --accent-pink: #FF00FF;
+    --accent-cyan: #00FFFF;
+    
+    /* --- TEMA DARK (Padrão) --- */
+    --bg-body: #0A0A0A;
+    --bg-card: #1A1A1A;
+    --bg-input: #252525;
+    
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1A1;
+    
+    --border-color: #333333;
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 15px rgba(63, 94, 251, 0.4);
+    
+    /* --- FONTES --- */
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Roboto', sans-serif;
 }
+
+/* --- RESET & BASE --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #0a090c;
-    color: #e0e0e0;
+    background-color: var(--bg-body);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden; /* Evita scroll horizontal indesejado */
 }
 
-/* --- Utilitários de Vidro (Glassmorphism) --- */
-.glass-card {
-    background: rgba(26, 26, 30, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}
+/* --- UTILITÁRIOS DE UI (NOVO DESIGN) --- */
 
-.game-select-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(138, 43, 226, 0.5);
-    box-shadow: 0 10px 40px -10px rgba(138, 43, 226, 0.3);
-}
-
-/* --- Gradientes e Textos --- */
-.primary-gradient-text {
-    background: linear-gradient(90deg, #8A2BE2, #4169E1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* --- INPUTS (Fix Autofill) --- */
-.form-input, input:not([type="checkbox"]):not([type="radio"]), select {
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 0.5rem;
-    padding: 0.85rem 1rem !important;
-    color: #ffffff !important;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0.75rem;
-}
-
-.form-input:focus, input:focus, select:focus {
-    outline: none;
-    border-color: #8A2BE2 !important;
-    box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.15);
-    background-color: rgba(0, 0, 0, 0.6) !important;
-}
-
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #131316 inset !important;
-    -webkit-text-fill-color: white !important;
-    transition: background-color 5000s ease-in-out 0s;
-}
-
-/* --- Navegação --- */
-.bottom-nav {
-    background: rgba(10, 9, 12, 0.95);
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    background-color: rgba(26, 26, 26, 0.8);
     backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
-.nav-item { color: #6b7280; transition: all 0.2s ease; }
-.nav-item.active { color: #8A2BE2; transform: scale(1.1); }
+.nav-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
 
-/* --- SPA Pages (Sem !important) --- */
-/* As páginas ficam escondidas por padrão (display: none) */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.badge {
+    background: linear-gradient(45deg, var(--primary-purple), var(--primary-blue));
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+/* Cards */
+.glass-card, .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card:hover, .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+    border-color: var(--primary-blue);
+}
+
+/* Tipografia Glitch */
+.glitch-text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.5rem; /* Ajustado para mobile */
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-shadow: 2px 2px var(--accent-pink), -2px -2px var(--accent-cyan);
+}
+
+@media (min-width: 768px) {
+    .glitch-text { font-size: 1.8rem; }
+}
+
+/* Inputs & Botões */
+.form-input {
+    width: 100%;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-purple) !important;
+    box-shadow: 0 0 8px rgba(127, 65, 255, 0.3);
+}
+
+button {
+    cursor: pointer;
+    font-family: var(--font-display);
+    letter-spacing: 1px;
+    transition: filter 0.2s ease, transform 0.1s ease;
+}
+
+button:active { transform: scale(0.98); }
+
+/* --- SPA LOGIC (MANTIDA PARA O JS FUNCIONAR) --- */
+
 .page {
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
 }
 
-/* Quando ativa, a página aparece. O JS vai garantir que apenas uma tenha essa classe */
 .page.active {
     display: block;
     opacity: 1;
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 0.5s ease-out;
 }
 
 @keyframes fadeIn {
@@ -97,15 +153,16 @@ input:-webkit-autofill:active {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Loader --- */
+/* Loading Spinner (Tema Novo) */
 .loader {
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top: 3px solid #8A2BE2;
+    border-top: 3px solid var(--accent-cyan);
     border-radius: 50%;
+    width: 40px;
+    height: 40px;
     animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- Utilitários --- */
+/* Modais */
 #modal-backdrop { transition: opacity 0.2s ease; }
-.custom-scroll { scrollbar-width: thin; scrollbar-color: #333 #0a090c; }
