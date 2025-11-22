@@ -14,13 +14,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     
     <!-- CSS Atualizado -->
-    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="stylesheet" href="style.css?v=5.1">
     <!-- Tailwind via CDN (Versão Estável) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Configuração do Tailwind para evitar conflitos e avisos -->
     <script>
         tailwind.config = {
-            darkMode: 'class',
+            darkMode: ['class', '[data-theme="dark"]'], // Ativa dark mode via atributo data-theme
             theme: {
                 extend: {
                     colors: {
@@ -36,7 +36,7 @@
 
     <!-- BANNER ALPHA -->
     <div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-yellow-600/90 to-red-600/90 text-white text-[10px] md:text-xs font-bold text-center py-1 z-[100] backdrop-blur-sm shadow-lg">
-        🚧 ALPHA V5.0: Layouts e regras sujeitos a alteração. 🚧
+        🚧 ALPHA V5.1: Layouts e regras sujeitos a alteração. 🚧
     </div>
 
     <!-- NAVBAR -->
@@ -45,17 +45,16 @@
         
         <div class="nav-controls">
             <div class="user-info hidden" id="nav-user-info">
-                <span id="nav-user-name" class="font-bold hidden md:inline text-white font-[Orbitron]">Jogador</span>
+                <!-- FIX: Removido text-white fixo, agora usa cor do tema -->
+                <span id="nav-user-name" class="font-bold hidden md:inline font-[Orbitron]">Jogador</span>
                 <span id="nav-user-balance" class="badge">GC 0.00</span>
             </div>
             
-            <!-- NOVO BOTÃO DE TEMA COM ÍCONES SVG -->
+            <!-- BOTÃO DE TEMA -->
             <button id="theme-toggle" class="btn-icon" aria-label="Alternar Tema">
-                <!-- Ícone Sol (Light Mode) -->
                 <svg class="icon-sun hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 </svg>
-                <!-- Ícone Lua (Dark Mode) - Padrão visível no CSS inicial -->
                 <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                 </svg>
@@ -76,6 +75,7 @@
         <!-- Landing Page -->
         <div id="landing-page" class="page active w-full text-center">
             <div class="max-w-4xl mx-auto mt-10">
+                <!-- GLITCH TEXT RESTAURADO -->
                 <h1 class="glitch-text text-5xl md:text-7xl mb-6 leading-tight" data-text="DESAFIE O SISTEMA">DESAFIE O SISTEMA</h1>
                 <p class="text-[var(--text-secondary)] text-xl md:text-2xl mb-10 max-w-2xl mx-auto font-light">Aposte na sua própria habilidade em League of Legends. Sem sorte, apenas <span class="text-[var(--accent-cyan)] font-bold">SKILL</span>.</p>
                 
@@ -89,18 +89,19 @@
             <div class="stats-grid mt-20 pb-10 max-w-5xl mx-auto">
                 <div class="card group hover:border-[var(--accent-cyan)] transition-colors duration-500">
                     <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-cyan)] transition-colors">01</span>
-                    <h3 class="text-2xl font-bold mt-2 text-white mb-2">Deposite</h3>
+                    <!-- FIX: Cor do texto dinâmica -->
+                    <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Deposite</h3>
                     <p class="text-sm text-[var(--text-secondary)]">Compre Glitchcoins via PIX instantâneo com segurança total.</p>
                 </div>
                 <div class="card group hover:border-[var(--primary-purple)] transition-colors duration-500 relative overflow-hidden">
                     <div class="absolute inset-0 bg-[var(--primary-purple)] opacity-0 group-hover:opacity-5 transition-opacity"></div>
                     <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--primary-purple)] transition-colors">02</span>
-                    <h3 class="text-2xl font-bold mt-2 text-white mb-2">Jogue</h3>
+                    <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Jogue</h3>
                     <p class="text-sm text-[var(--text-secondary)]">Conecte sua conta Riot e cumpra missões na sua Ranked.</p>
                 </div>
                 <div class="card group hover:border-[var(--accent-pink)] transition-colors duration-500">
                     <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-pink)] transition-colors">03</span>
-                    <h3 class="text-2xl font-bold mt-2 text-white mb-2">Lucre</h3>
+                    <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Lucre</h3>
                     <p class="text-sm text-[var(--text-secondary)]">Venceu a aposta? O saldo é seu. Saque via PIX na hora.</p>
                 </div>
             </div>
@@ -109,7 +110,7 @@
         <!-- Login Form -->
         <div id="login-page" class="page hidden w-full max-w-md">
             <div class="glass-card p-8 border border-[var(--border-color)]">
-                <h2 class="text-3xl font-bold text-center mb-8 font-[var(--font-display)] text-white tracking-widest">LOGIN</h2>
+                <h2 class="text-3xl font-bold text-center mb-8 font-[var(--font-display)] tracking-widest text-[var(--text-primary)]">LOGIN</h2>
                 <form id="login-form" class="space-y-5">
                     <p id="login-error-msg" class="text-[var(--accent-orange)] text-sm text-center hidden bg-red-500/10 p-2 rounded border border-red-500/20"></p>
                     
@@ -122,7 +123,7 @@
                     </button>
                 </form>
                 <div class="text-center mt-8 pt-6 border-t border-[var(--border-color)]">
-                    <button id="google-login-btn" class="text-sm text-[var(--text-secondary)] hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto">
+                    <button id="google-login-btn" class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center gap-2 mx-auto">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
                         Entrar com Google
                     </button>
@@ -134,7 +135,7 @@
         <!-- Register Form -->
         <div id="register-page" class="page hidden w-full max-w-md">
             <div class="glass-card p-8">
-                <h2 class="text-3xl font-bold text-center mb-8 font-[var(--font-display)] text-white tracking-widest">REGISTRO</h2>
+                <h2 class="text-3xl font-bold text-center mb-8 font-[var(--font-display)] tracking-widest text-[var(--text-primary)]">REGISTRO</h2>
                 
                 <div class="flex justify-between mb-8 px-2 relative">
                     <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-[var(--border-color)] -z-10"></div>
@@ -144,9 +145,9 @@
                 </div>
 
                 <form id="register-form" class="space-y-5">
+                    <!-- Campos de registro mantidos iguais, apenas verificando se há text-white forçados -->
                     <p id="register-error-msg" class="text-[var(--accent-orange)] text-sm text-center hidden bg-red-500/10 p-2 rounded"></p>
                     
-                    <!-- Step 1 -->
                     <div id="register-step-1" class="register-step space-y-4">
                         <input type="email" id="reg-email" class="form-input" placeholder="E-mail" autocomplete="email" required>
                         <input type="password" id="reg-password" class="form-input" placeholder="Senha (min 6)" autocomplete="new-password" required>
@@ -154,7 +155,6 @@
                         <button type="button" id="reg-next-step-1" class="w-full glass-card bg-[var(--primary-purple)] text-white font-bold py-3 mt-2 border-none hover:bg-[var(--primary-blue)] transition-colors">PRÓXIMO</button>
                     </div>
 
-                    <!-- Step 2 -->
                     <div id="register-step-2" class="register-step hidden space-y-4">
                         <input type="text" id="reg-fullname" class="form-input" placeholder="Nome Completo" autocomplete="name" required>
                         <input type="text" id="reg-cpf" class="form-input" placeholder="CPF (apenas números)" required>
@@ -163,17 +163,13 @@
                         <button type="button" id="reg-next-step-2" class="w-full glass-card bg-[var(--primary-purple)] text-white font-bold py-3 mt-2 border-none">PRÓXIMO</button>
                     </div>
 
-                    <!-- Step 3 -->
                     <div id="register-step-3" class="register-step hidden space-y-4">
                         <div class="bg-[var(--bg-input)] border border-[var(--accent-orange)] p-4 rounded mb-4 text-xs text-[var(--text-secondary)]">
-                            <p class="text-[var(--accent-orange)] font-bold mb-2 text-sm uppercase tracking-wider flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                Regras Críticas:
-                            </p>
+                            <p class="text-[var(--accent-orange)] font-bold mb-2 text-sm uppercase tracking-wider flex items-center gap-2">⚠️ Regras Críticas:</p>
                             <ul class="list-disc pl-4 space-y-1">
-                                <li>Smurfing = <span class="text-white">BANIMENTO</span>.</li>
-                                <li>Elojob = <span class="text-white">BANIMENTO</span>.</li>
-                                <li>Compartilhar conta = <span class="text-white">BANIMENTO</span>.</li>
+                                <li>Smurfing = <span class="text-[var(--text-primary)] font-bold">BANIMENTO</span>.</li>
+                                <li>Elojob = <span class="text-[var(--text-primary)] font-bold">BANIMENTO</span>.</li>
+                                <li>Compartilhar conta = <span class="text-[var(--text-primary)] font-bold">BANIMENTO</span>.</li>
                             </ul>
                         </div>
                         <div class="flex items-start mb-6 gap-3 p-2 bg-white/5 rounded border border-white/10">
@@ -194,8 +190,8 @@
         <div id="terms-page" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg">
             <div class="glass-card w-full max-w-2xl max-h-[85vh] flex flex-col border border-[var(--border-color)]">
                 <div class="flex justify-between items-center pb-4 border-b border-[var(--border-color)]">
-                    <h2 class="text-xl font-bold font-[var(--font-display)] text-white">TERMOS DE USO</h2>
-                    <button id="close-terms-btn" class="text-2xl hover:text-[var(--accent-orange)] transition-colors">&times;</button>
+                    <h2 class="text-xl font-bold font-[var(--font-display)] text-[var(--text-primary)]">TERMOS DE USO</h2>
+                    <button id="close-terms-btn" class="text-2xl hover:text-[var(--accent-orange)] transition-colors text-[var(--text-primary)]">&times;</button>
                 </div>
                 <div class="flex-grow overflow-y-auto py-6 text-sm text-[var(--text-secondary)] space-y-4 custom-scroll pr-2">
                     <p>1. Ao usar o Glitch Arena, você concorda integralmente com as regras de Fair Play.</p>
@@ -218,7 +214,7 @@
             <section class="glass-card mb-8 p-0 overflow-hidden border-none">
                 <div class="bg-gradient-to-r from-[var(--bg-card)] to-[#1a1a2e] p-6 border-b border-[var(--border-color)]">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold font-[var(--font-display)] tracking-wider">ARENA DE JOGOS</h2>
+                        <h2 class="text-xl font-bold font-[var(--font-display)] tracking-wider text-[var(--text-primary)]">ARENA DE JOGOS</h2>
                         <span class="text-[10px] font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1">
                             <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> ONLINE
                         </span>
@@ -232,7 +228,7 @@
                             <span class="font-bold text-[#C89B3C] text-2xl">L</span>
                         </div>
                         <div class="flex-1">
-                            <h3 class="font-bold text-xl text-white group-hover:text-[var(--primary-purple)] transition-colors">League of Legends</h3>
+                            <h3 class="font-bold text-xl text-[var(--text-primary)] group-hover:text-[var(--primary-purple)] transition-colors">League of Legends</h3>
                             <p class="text-xs text-[var(--text-secondary)] mt-1">Desafios de KDA, Vitória e Farm (Summoner's Rift)</p>
                         </div>
                         <div class="text-[var(--accent-cyan)] text-2xl group-hover:translate-x-2 transition-transform">→</div>
@@ -242,8 +238,8 @@
                     <div class="glass-card p-4 flex items-center gap-6 opacity-40 grayscale cursor-not-allowed border border-white/5">
                         <div class="w-16 h-16 bg-[#FF4655] rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">V</div>
                         <div>
-                            <h3 class="font-bold text-xl">Valorant</h3>
-                            <p class="text-xs mt-1">Módulo em desenvolvimento</p>
+                            <h3 class="font-bold text-xl text-[var(--text-primary)]">Valorant</h3>
+                            <p class="text-xs mt-1 text-[var(--text-secondary)]">Módulo em desenvolvimento</p>
                         </div>
                     </div>
                 </div>
@@ -257,13 +253,13 @@
                         <span class="w-2 h-2 bg-red-500 rounded-full"></span> Desconectado
                     </p>
                 </div>
-                <button id="lol-connect-btn" data-game="lol" class="glass-card px-6 py-2 text-sm font-bold hover:bg-white/10 border border-white/20">CONECTAR</button>
+                <button id="lol-connect-btn" data-game="lol" class="glass-card px-6 py-2 text-sm font-bold hover:bg-white/10 border border-white/20 text-[var(--text-primary)]">CONECTAR</button>
             </section>
         </div>
 
         <!-- Challenges Page -->
         <div id="challenges-page" class="page hidden">
-            <button id="back-to-home" class="mb-6 text-[var(--text-secondary)] hover:text-white flex items-center gap-2 font-bold text-sm uppercase tracking-wider transition-colors">
+            <button id="back-to-home" class="mb-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-2 font-bold text-sm uppercase tracking-wider transition-colors">
                 <span>←</span> Voltar para Dashboard
             </button>
             
@@ -278,35 +274,35 @@
             
             <!-- Custom Bet Card -->
             <div id="request-bet-card" class="hidden glass-card border-dashed border-2 border-[var(--border-color)] text-center bg-transparent hover:border-[var(--primary-purple)] cursor-pointer group p-8 transition-all">
-                <h3 class="font-bold mb-2 text-xl group-hover:text-[var(--primary-purple)] transition-colors">CRIE SEU PRÓPRIO DESAFIO</h3>
+                <h3 class="font-bold mb-2 text-xl group-hover:text-[var(--primary-purple)] transition-colors text-[var(--text-primary)]">CRIE SEU PRÓPRIO DESAFIO</h3>
                 <p class="text-sm text-[var(--text-secondary)] mb-6">Defina sua própria meta de Kills e desafie o algoritmo.</p>
-                <button id="open-request-bet-modal" class="glass-card px-8 py-3 text-sm font-bold bg-white/5 hover:bg-white/10 border-none">PERSONALIZAR META</button>
+                <button id="open-request-bet-modal" class="glass-card px-8 py-3 text-sm font-bold bg-white/5 hover:bg-white/10 border-none text-[var(--text-primary)]">PERSONALIZAR META</button>
             </div>
         </div>
 
-        <!-- Outras Páginas (Placeholders) -->
+        <!-- Outras Páginas -->
         <div id="bets-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-white border-l-4 border-yellow-500 pl-4">APOSTAS ATIVAS</h1>
+            <h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-yellow-500 pl-4">APOSTAS ATIVAS</h1>
             <div id="active-bets-list" class="space-y-4"></div>
         </div>
         <div id="history-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-white border-l-4 border-[var(--text-secondary)] pl-4">HISTÓRICO</h1>
+            <h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-[var(--text-secondary)] pl-4">HISTÓRICO</h1>
             <div id="history-bets-list" class="space-y-4"></div>
         </div>
         
         <!-- Profile Page -->
         <div id="profile-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-8 font-[var(--font-display)] text-white border-l-4 border-[var(--primary-purple)] pl-4">PERFIL DO JOGADOR</h1>
+            <h1 class="text-2xl font-bold mb-8 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-[var(--primary-purple)] pl-4">PERFIL DO JOGADOR</h1>
             
             <!-- Wallet Stats -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="glass-card p-6 border-l-4 border-[var(--primary-blue)] relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">💰</div>
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl text-[var(--text-primary)]">💰</div>
                     <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Saldo Real (Disponível)</span>
-                    <span id="wallet-balance" class="stat-value text-3xl font-bold text-white font-[Orbitron]">GC 0.00</span>
+                    <span id="wallet-balance" class="stat-value text-3xl font-bold text-[var(--text-primary)] font-[Orbitron]">GC 0.00</span>
                 </div>
                 <div class="glass-card p-6 border-l-4 border-[var(--primary-purple)] relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">🎁</div>
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl text-[var(--text-primary)]">🎁</div>
                     <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Saldo de Bônus</span>
                     <span id="bonus-balance" class="stat-value text-3xl font-bold text-[var(--primary-purple)] font-[Orbitron]">GC 0.00</span>
                 </div>
@@ -317,7 +313,7 @@
                 <button id="open-deposit-modal" class="glass-card py-4 font-bold bg-green-600/20 hover:bg-green-600/30 border-green-500/50 text-green-400 transition-all border shadow-[0_0_15px_rgba(34,197,94,0.2)] hover:shadow-[0_0_25px_rgba(34,197,94,0.4)]">
                     DEPOSITAR
                 </button>
-                <button id="open-withdraw-modal" class="glass-card py-4 font-bold hover:bg-white/10 transition-all">
+                <button id="open-withdraw-modal" class="glass-card py-4 font-bold hover:bg-white/10 transition-all text-[var(--text-primary)]">
                     SACAR
                 </button>
             </div>
@@ -333,7 +329,7 @@
                         <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                     </div>
                 </div>
-                <button id="convert-bonus-btn" class="w-full mt-4 glass-card py-3 text-xs font-bold opacity-50 cursor-not-allowed transition-all border-none bg-white/5" disabled>CONVERTER BÔNUS EM REAL</button>
+                <button id="convert-bonus-btn" class="w-full mt-4 glass-card py-3 text-xs font-bold opacity-50 cursor-not-allowed transition-all border-none bg-white/5 text-[var(--text-primary)]" disabled>CONVERTER BÔNUS EM REAL</button>
             </div>
 
             <!-- Tools -->
@@ -359,8 +355,8 @@
                     <span id="kyc-status" class="text-[10px] font-bold bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded border border-yellow-500/30">PENDENTE</span>
                 </div>
                 <div id="kyc-content" class="text-sm text-[var(--text-secondary)] space-y-2 bg-black/20 p-4 rounded border border-white/5">
-                    <p class="flex justify-between"><span>Nome:</span> <span id="kyc-fullname" class="text-white font-bold">-</span></p>
-                    <p class="flex justify-between"><span>CPF:</span> <span id="kyc-cpf" class="text-white font-bold font-mono">-</span></p>
+                    <p class="flex justify-between"><span>Nome:</span> <span id="kyc-fullname" class="text-[var(--text-primary)] font-bold">-</span></p>
+                    <p class="flex justify-between"><span>CPF:</span> <span id="kyc-cpf" class="text-[var(--text-primary)] font-bold font-mono">-</span></p>
                 </div>
                 <div id="kyc-loading" class="hidden text-center mt-4"><div class="loader w-6 h-6 inline-block"></div></div>
                 <button id="kyc-verify-btn" class="w-full mt-4 glass-card py-3 text-xs font-bold text-[var(--primary-blue)] hover:text-white hover:bg-[var(--primary-blue)] transition-all hidden border border-[var(--primary-blue)]">VALIDAR DADOS AGORA</button>
@@ -398,47 +394,47 @@
         </div>
     </div>
 
-    <!-- MODALS -->
+    <!-- MODALS (Depósito, Saque, etc. mantidos iguais mas garantindo classes dinâmicas) -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 z-[60] backdrop-blur-md transition-opacity duration-300"></div>
 
-    <!-- Generic Modal Structure -->
-    <!-- Deposit -->
+    <!-- Deposit Modal -->
     <div id="deposit-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto relative border border-[var(--border-color)] shadow-2xl">
-            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-white text-center">DEPOSITAR</h3>
+            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)] text-center">DEPOSITAR</h3>
             <div id="deposit-step-1">
                 <div class="mb-6">
                     <label class="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">Valor (R$)</label>
                     <input type="number" id="deposit-amount" class="form-input text-center text-2xl font-bold" placeholder="0.00">
                 </div>
                 <div class="grid grid-cols-3 gap-3 mb-6">
-                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10" data-value="20">R$ 20</button>
-                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10" data-value="50">R$ 50</button>
-                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10" data-value="100">R$ 100</button>
+                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10 text-[var(--text-primary)]" data-value="20">R$ 20</button>
+                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10 text-[var(--text-primary)]" data-value="50">R$ 50</button>
+                    <button class="deposit-preset-btn glass-card text-xs font-bold py-3 hover:bg-white/10 transition-colors border-white/10 text-[var(--text-primary)]" data-value="100">R$ 100</button>
                 </div>
                 <input type="text" id="deposit-coupon-input" class="form-input uppercase text-center text-sm tracking-widest mb-4" placeholder="CUPOM (OPCIONAL)">
                 <p id="deposit-error-msg" class="text-[var(--accent-orange)] text-xs hidden mb-4 text-center bg-red-500/10 p-2 rounded"></p>
                 <div class="flex gap-3 mt-2">
-                    <button id="deposit-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border-none">CANCELAR</button>
+                    <button id="deposit-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
                     <button id="deposit-confirm-btn" class="flex-1 glass-card bg-green-600 hover:bg-green-500 text-white border-none py-3 font-bold text-xs shadow-lg transition-all">GERAR PIX</button>
                 </div>
                 <div id="deposit-loader" class="hidden text-center mt-4"><div class="loader w-8 h-8 mx-auto"></div></div>
             </div>
+            <!-- Step 2 Depósito (QR Code) -->
             <div id="deposit-step-2" class="hidden text-center">
                 <div class="bg-white p-4 rounded-xl inline-block mb-6 shadow-[0_0_20px_rgba(255,255,255,0.1)]"><img id="deposit-qrcode-img" class="w-48 h-48 mix-blend-multiply"></div>
                 <div class="flex bg-black/40 p-3 rounded-lg mb-6 border border-white/10 items-center gap-2">
                     <input id="deposit-copypaste" class="bg-transparent w-full text-xs truncate outline-none text-[var(--text-secondary)] font-mono" readonly>
                     <button id="deposit-copy-btn" class="text-[var(--primary-purple)] font-bold text-xs hover:text-white transition-colors whitespace-nowrap">COPIAR</button>
                 </div>
-                <button id="deposit-finish-btn" class="w-full glass-card py-4 font-bold hover:bg-white/10 border-none">FECHAR E AGUARDAR</button>
+                <button id="deposit-finish-btn" class="w-full glass-card py-4 font-bold hover:bg-white/10 border-none text-[var(--text-primary)]">FECHAR E AGUARDAR</button>
             </div>
         </div>
     </div>
 
-    <!-- Withdraw -->
+    <!-- Withdraw Modal -->
     <div id="withdraw-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
-            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-white text-center">SACAR</h3>
+            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-[var(--text-primary)] text-center">SACAR</h3>
             <p class="text-xs text-[var(--text-secondary)] mb-6 text-center">O PIX será enviado para o CPF titular da conta.</p>
             
             <div class="mb-6">
@@ -457,17 +453,17 @@
             <p id="withdraw-error-msg" class="text-[var(--accent-orange)] text-xs hidden mb-4 text-center bg-red-500/10 p-2 rounded"></p>
             
             <div class="flex gap-3">
-                <button id="withdraw-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border-none">CANCELAR</button>
+                <button id="withdraw-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
                 <button id="withdraw-confirm-btn" class="flex-1 glass-card bg-[var(--primary-purple)] hover:bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg transition-all">SOLICITAR</button>
             </div>
             <div id="withdraw-loader" class="hidden text-center mt-4"><div class="loader w-8 h-8 mx-auto"></div></div>
         </div>
     </div>
 
-    <!-- Connect -->
+    <!-- Connect Modal -->
     <div id="connect-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto text-center shadow-2xl border border-[var(--border-color)]">
-            <h3 id="connect-modal-title" class="font-bold text-xl mb-6 font-[var(--font-display)] text-white">CONECTAR CONTA</h3>
+            <h3 id="connect-modal-title" class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">CONECTAR CONTA</h3>
             
             <div class="mb-6">
                 <input id="riot-id-input" class="form-input text-center text-lg font-bold" placeholder="Nome#TAG">
@@ -482,17 +478,17 @@
             <p id="connect-error-msg" class="text-[var(--accent-orange)] text-xs hidden mb-4 bg-red-500/10 p-2 rounded"></p>
             
             <div class="flex gap-3">
-                <button id="connect-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border-none">VOLTAR</button>
+                <button id="connect-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">VOLTAR</button>
                 <button id="connect-modal-submit" class="flex-1 glass-card bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs opacity-50 cursor-not-allowed shadow-lg transition-all" disabled>VINCULAR</button>
             </div>
             <div id="connect-loader" class="hidden text-center mt-4"><div class="loader w-8 h-8 mx-auto"></div></div>
         </div>
     </div>
 
-    <!-- KYC -->
+    <!-- KYC Modal -->
     <div id="kyc-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
-            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-white text-center">DADOS PESSOAIS</h3>
+            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)] text-center">DADOS PESSOAIS</h3>
             <p class="text-xs text-[var(--text-secondary)] mb-4 text-center">Necessário para processar saques (Lei Federal).</p>
             <form id="kyc-form" class="space-y-4">
                 <div>
@@ -509,7 +505,7 @@
                 </div>
                 <p id="kyc-error-msg" class="text-[var(--accent-orange)] text-xs hidden text-center bg-red-500/10 p-2 rounded"></p>
                 <div class="flex gap-3 mt-6">
-                    <button type="button" id="kyc-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border-none">CANCELAR</button>
+                    <button type="button" id="kyc-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
                     <button type="submit" id="kyc-modal-submit" class="flex-1 glass-card bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg">SALVAR</button>
                 </div>
             </form>
@@ -520,8 +516,8 @@
     <div id="bet-slip-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto flex flex-col max-h-[80vh] shadow-2xl border border-[var(--primary-purple)]/30">
             <div class="flex justify-between items-center mb-4 pb-4 border-b border-[var(--border-color)]">
-                <h3 class="font-bold font-[var(--font-display)] text-white text-lg tracking-wider">BOLETIM DE APOSTA</h3>
-                <button id="bet-slip-modal-close" class="text-2xl hover:text-[var(--accent-orange)] transition-colors">&times;</button>
+                <h3 class="font-bold font-[var(--font-display)] text-[var(--text-primary)] text-lg tracking-wider">BOLETIM DE APOSTA</h3>
+                <button id="bet-slip-modal-close" class="text-2xl hover:text-[var(--accent-orange)] transition-colors text-[var(--text-primary)]">&times;</button>
             </div>
             
             <div id="bet-slip-list" class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 custom-scroll"></div>
@@ -557,10 +553,10 @@
     <!-- Request Bet (Custom) -->
     <div id="request-bet-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto text-center shadow-2xl border border-[var(--border-color)]">
-            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-white">META PERSONALIZADA</h3>
+            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">META PERSONALIZADA</h3>
             
             <div id="request-form-container">
-                <p class="text-sm text-[var(--text-secondary)] mb-6">Quantas <span id="request-target-label" class="text-white font-bold text-lg mx-1 border-b border-[var(--primary-purple)]">Kills</span> você garante fazer?</p>
+                <p class="text-sm text-[var(--text-secondary)] mb-6">Quantas <span id="request-target-label" class="text-[var(--text-primary)] font-bold text-lg mx-1 border-b border-[var(--primary-purple)]">Kills</span> você garante fazer?</p>
                 
                 <div class="relative mb-2 max-w-[150px] mx-auto">
                     <input type="number" id="request-target-input" class="form-input text-center font-bold text-4xl p-4 h-20 bg-black/30 border-white/10 focus:border-[var(--primary-purple)]" placeholder="0">
@@ -570,7 +566,7 @@
                 <p id="request-error-msg" class="text-[var(--accent-orange)] text-xs mb-6 hidden bg-red-500/10 p-2 rounded"></p>
                 
                 <div class="flex gap-3">
-                    <button id="request-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border-none">CANCELAR</button>
+                    <button id="request-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
                     <button id="request-modal-submit" class="flex-1 glass-card bg-[var(--primary-purple)] text-white border-none py-3 font-bold text-xs shadow-lg hover:bg-[var(--primary-blue)] transition-colors">CALCULAR ODD</button>
                 </div>
             </div>
@@ -583,7 +579,7 @@
                     <h4 id="request-result-title" class="font-bold mt-4 text-sm text-white relative z-10 border-t border-white/10 pt-4">...</h4>
                 </div>
                 <button id="request-add-to-slip" class="w-full glass-card bg-[var(--primary-blue)] text-white border-none py-4 font-bold mb-3 hover:brightness-110 shadow-lg transition-all">ADICIONAR AO BOLETIM</button>
-                <button id="request-try-again" class="text-xs text-[var(--text-secondary)] hover:text-white underline transition-colors">Tentar outro valor</button>
+                <button id="request-try-again" class="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline transition-colors">Tentar outro valor</button>
             </div>
         </div>
     </div>

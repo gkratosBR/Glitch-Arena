@@ -1,9 +1,9 @@
 /* =========================================
-   GLITCH ARENA - TEMA V5.0 (Deep Cyberpunk)
+   GLITCH ARENA - TEMA V5.1 (Animated Cyberpunk)
    ========================================= */
 
 :root {
-    /* --- PALETA CORE (Baseada no Logo) --- */
+    /* --- PALETA CORE --- */
     --primary-blue: #3F5EFB;
     --primary-purple: #7F41FF;
     --accent-orange: #FC466B;
@@ -19,7 +19,7 @@
     --text-secondary: #9CA3AF;
     
     --border-color: rgba(255, 255, 255, 0.1);
-    --grid-line: rgba(63, 94, 251, 0.1);
+    --grid-line: rgba(63, 94, 251, 0.2); /* Mais visível para animação */
     
     --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.5);
     --shadow-glow: 0 0 20px rgba(127, 65, 255, 0.4);
@@ -29,17 +29,17 @@
     --font-body: 'Roboto', sans-serif;
 }
 
-/* --- TEMA LIGHT (Invertido para legibilidade) --- */
+/* --- TEMA LIGHT --- */
 [data-theme="light"] {
     --bg-deep: #F0F2F5;
-    --bg-card: rgba(255, 255, 255, 0.8);
+    --bg-card: rgba(255, 255, 255, 0.85); /* Mais opaco para contraste */
     --bg-input: #FFFFFF;
     
     --text-primary: #111827;
     --text-secondary: #4B5563;
     
     --border-color: rgba(0, 0, 0, 0.1);
-    --grid-line: rgba(63, 94, 251, 0.05);
+    --grid-line: rgba(63, 94, 251, 0.08);
     
     --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
     --shadow-glow: 0 0 15px rgba(63, 94, 251, 0.2);
@@ -57,22 +57,100 @@ body {
     overflow-x: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
     
-    /* BACKGROUND GRID CYBERPUNK */
+    /* BACKGROUND GRID ANIMADO (Retro Wave Style) */
     background-image: 
         linear-gradient(var(--grid-line) 1px, transparent 1px),
         linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-size: 50px 50px;
     background-position: center top;
+    animation: gridScroll 20s linear infinite; /* Animação do fundo */
 }
 
-/* Vinheta para focar o centro (escurece as bordas) */
+/* Vinheta para profundidade */
 body::after {
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at 50% 50%, transparent 0%, var(--bg-deep) 100%);
+    background: radial-gradient(circle at 50% 50%, transparent 20%, var(--bg-deep) 90%);
     pointer-events: none;
     z-index: -1;
+}
+
+@keyframes gridScroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 50px; } /* Move 1 bloco para baixo, criando loop infinito */
+}
+
+/* --- TIPOGRAFIA GLITCH (RESTAURADA & MELHORADA) --- */
+.glitch-text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2.5rem;
+    letter-spacing: 3px;
+    color: var(--text-primary);
+    position: relative;
+    display: inline-block;
+    text-transform: uppercase;
+    /* Removemos o gradiente do texto base para o efeito funcionar melhor, ou usamos mix-blend */
+}
+
+/* Efeito de Sombra/Duplicação */
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-deep); /* Fundo do texto para recorte */
+}
+
+/* Camada Vermelha/Rosa (Desvio para esquerda) */
+.glitch-text::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff00c1;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim-1 5s infinite linear alternate-reverse;
+}
+
+/* Camada Azul/Ciano (Desvio para direita) */
+.glitch-text::after {
+    left: -2px;
+    text-shadow: -2px 0 #00fff9;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim-2 5s infinite linear alternate-reverse;
+}
+
+/* Keyframes do Glitch (Recortes aleatórios) */
+@keyframes glitch-anim-1 {
+    0% { clip: rect(20px, 9999px, 10px, 0); }
+    5% { clip: rect(70px, 9999px, 90px, 0); }
+    10% { clip: rect(30px, 9999px, 10px, 0); }
+    15% { clip: rect(90px, 9999px, 100px, 0); }
+    20% { clip: rect(10px, 9999px, 80px, 0); }
+    25% { clip: rect(50px, 9999px, 20px, 0); }
+    30% { clip: rect(20px, 9999px, 60px, 0); }
+    35% { clip: rect(80px, 9999px, 40px, 0); }
+    40% { clip: rect(10px, 9999px, 90px, 0); }
+    100% { clip: rect(50px, 9999px, 60px, 0); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip: rect(90px, 9999px, 10px, 0); }
+    5% { clip: rect(10px, 9999px, 90px, 0); }
+    10% { clip: rect(60px, 9999px, 30px, 0); }
+    15% { clip: rect(20px, 9999px, 10px, 0); }
+    20% { clip: rect(80px, 9999px, 50px, 0); }
+    25% { clip: rect(30px, 9999px, 20px, 0); }
+    30% { clip: rect(70px, 9999px, 90px, 0); }
+    35% { clip: rect(10px, 9999px, 60px, 0); }
+    40% { clip: rect(50px, 9999px, 20px, 0); }
+    100% { clip: rect(20px, 9999px, 80px, 0); }
+}
+
+@media (max-width: 768px) { 
+    .glitch-text { font-size: 1.8rem; } 
 }
 
 /* --- UTILITÁRIOS DE UI --- */
@@ -126,47 +204,6 @@ body::after {
     border-color: var(--primary-purple);
     box-shadow: var(--shadow-glow);
 }
-
-.glass-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 2px;
-    background: linear-gradient(90deg, var(--accent-orange), var(--primary-purple), var(--accent-cyan));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.glass-card:hover::before { opacity: 1; }
-
-/* --- TIPOGRAFIA --- */
-.glitch-text {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 2.5rem;
-    letter-spacing: 3px;
-    color: var(--text-primary);
-    position: relative;
-    display: inline-block;
-    text-transform: uppercase;
-    
-    /* Gradiente no Texto (Estilo do Logo) */
-    background: linear-gradient(to right, #FC466B, #7F41FF, #3F5EFB);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent; /* Fallback seguro pode ser necessário em alguns browsers, mas funciona bem com sombras abaixo */
-    text-shadow: 0 0 30px rgba(127, 65, 255, 0.3);
-}
-
-/* Correção para o efeito de clip funcionar com gradiente */
-@supports (-webkit-background-clip: text) {
-    .glitch-text { 
-        -webkit-text-fill-color: transparent; 
-        text-shadow: none; /* Remove sombra sólida se o gradiente carregar */
-        filter: drop-shadow(0 0 5px rgba(127, 65, 255, 0.5));
-    }
-}
-
-@media (max-width: 768px) { .glitch-text { font-size: 1.8rem; } }
 
 /* --- INPUTS & BOTÕES --- */
 .form-input {
@@ -247,7 +284,7 @@ button:active { transform: scale(0.96); }
     font-weight: 700;
 }
 
-/* --- UTILS & MODAIS --- */
+/* --- UTILS --- */
 .loader {
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-top: 3px solid var(--accent-cyan);
@@ -270,7 +307,6 @@ button:active { transform: scale(0.96); }
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary-purple); }
 
-/* SPA Logic */
 .page { display: none; opacity: 0; transition: opacity 0.3s ease; }
 .page.active { display: block; opacity: 1; animation: slideUp 0.5s ease-out; }
 
