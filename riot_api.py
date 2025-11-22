@@ -13,7 +13,8 @@ if not RIOT_API_KEY:
 HEADERS = {"X-Riot-Token": RIOT_API_KEY}
 ACCOUNT_API_URL = "americas.api.riotgames.com"
 MATCH_API_URL = "americas.api.riotgames.com"
-LOL_API_URL = "br1.api.riotgames.com"
+# Spectator é um serviço REGIONAL (BR1), não continental (Americas)
+SPECTATOR_API_URL = "br1.api.riotgames.com" 
 
 # Dados falsos para fallback quando a API falhar ou a chave expirar
 MOCK_STATS_DATA = {
@@ -33,6 +34,42 @@ MOCK_STATS_DATA = {
         }
     }
 }
+
+# --- NOVO: VERIFICAÇÃO DE PARTIDA AO VIVO (ANTI-SNIPPING) ---
+def check_active_game(puuid):
+    """
+    Retorna True se o jogador estiver em partida, False se estiver livre.
+    Usa Spectator V5 (por PUUID).
+    """
+    if "mock" in puuid or not RIOT_API_KEY:
+        return False # Mock nunca está em partida, permite testar aposta
+
+    url = f"https://{SPECTATOR_API_URL}/lol/spectator/v5/active-games/by-summoner/{puuid}"
+    
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=3)
+        
+        # 404 significa "Data not found", ou seja, NÃO está em partida. (Sinal Verde)
+        if res.status_code == 404:
+            return False
+            
+        # 200 significa que retornou dados da partida. ESTÁ JOGANDO. (Sinal Vermelho)
+        if res.status_code == 200:
+            game_data = res.json()
+            # Opcional: Ignorar Custom Games se quiser permitir apostas neles (não recomendado para Ranked)
+            # if game_data.get('gameType') == 'CUSTOM_GAME': return False
+            print(f"[Anti-Snipping] Bloqueio: Jogador em partida (Mode: {game_data.get('gameMode')})")
+            return True
+            
+        # Outros erros (403 Forbidden, 429 Rate Limit)
+        # Por segurança, se a API der erro, bloqueamos a aposta ou logamos o erro?
+        # Para MVP, vamos logar e permitir, mas em prod o ideal é 'Fail Safe' (Bloquear).
+        print(f"[Spectator API] Erro inesperado: {res.status_code}")
+        return False
+
+    except Exception as e:
+        print(f"[Spectator API] Falha de conexão: {e}")
+        return False
 
 def get_player_data(riot_id, game_type):
     if game_type != 'lol': raise Exception(f"Jogo não suportado: {game_type}")

@@ -164,6 +164,11 @@ async def verify_admin(authorization: str = Header(None)):
     except Exception as e: raise HTTPException(401, f"Erro auth: {str(e)}")
 
 # --- HELPERS ---
+def _sanitize_cpf(cpf: str) -> str:
+    """Remove caracteres não numéricos do CPF."""
+    if not cpf: return ""
+    return "".join(filter(str.isdigit, cpf))
+
 def get_platform_config():
     try:
         c = db.collection('platform').document('config').get().to_dict() or {}
@@ -327,16 +332,32 @@ async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current
     try:
         logger.info(f"Registro: {payload.email}")
         if db.collection('users').document(user_id).get().exists: return {"status": "exists"}
-        status = "verified" if payload.cpf and len(payload.cpf) >= 11 else "pending"
+        
+        # --- NOVO: CHECK DE DUPLICIDADE DE CPF ---
+        clean_cpf = _sanitize_cpf(payload.cpf)
+        if clean_cpf and len(clean_cpf) >= 11:
+            # Procura qualquer usuário que já tenha esse CPF
+            existing = list(db.collection('users').where(filter=FieldFilter('cpf', '==', clean_cpf)).limit(1).stream())
+            if existing:
+                logger.warning(f"Tentativa de duplicidade de CPF: {clean_cpf} por {payload.email}")
+                # Não bloqueia o login, mas marca como falha de KYC ou lança erro explícito.
+                # Aqui vamos lançar erro para impedir o registro se o CPF for obrigatório
+                # Se CPF for opcional no registro, apenas não salvamos.
+                # Assumindo que no flow atual o CPF é pedido:
+                raise HTTPException(400, "CPF já cadastrado em outra conta.")
+
+        status = "verified" if clean_cpf and len(clean_cpf) >= 11 else "pending"
+        
         db.collection('users').document(user_id).set({
             "email": payload.email, "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
             "connectedAccounts": {}, "createdAt": firestore.SERVER_TIMESTAMP, "profit_loss": 0.0, "total_bets_made": 0,
-            "fullname": payload.fullname, "cpf": payload.cpf, "birthdate": payload.birthdate, "kyc_status": status,
+            "fullname": payload.fullname, "cpf": clean_cpf, "birthdate": payload.birthdate, "kyc_status": status,
             "total_wagered": 0.0, "total_deposited": 0.0, "currentBetLimit": 3.00, 
             "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None,
             "connection_status": "idle"
         })
         return {"status": "success", "kyc_status": status}
+    except HTTPException as he: raise he
     except Exception as e:
         logger.error(f"Erro Registro: {e}")
         raise HTTPException(500, str(e))
@@ -374,18 +395,33 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
 @app.post("/api/place-bet")
 async def place_bet_endpoint(payload: PlaceBetRequest, user_id: str = Depends(get_current_user_uid)):
     if payload.betAmount <= 0 or not payload.betItems: raise HTTPException(400, "Inválido")
+    
     user_ref = db.collection('users').document(user_id)
     user_data = user_ref.get().to_dict()
+    
     if payload.betAmount > user_data.get('currentBetLimit', 3.00): raise HTTPException(400, "Limite excedido")
-    acct = user_data.get("connectedAccounts", {}).get(payload.betItems[0].get('gameType'))
+    
+    game_type = payload.betItems[0].get('gameType')
+    acct = user_data.get("connectedAccounts", {}).get(game_type)
+    
     if not acct: raise HTTPException(400, "Conta não conectada")
+    
+    # --- NOVO: CHECK DE ANTI-SNIPPING (LIVE GAME) ---
+    # Verifica se o jogador já está em partida. Se estiver, bloqueia a aposta.
+    if game_type == 'lol':
+        is_in_game = riot_api.check_active_game(acct.get("puuid"))
+        if is_in_game:
+            logger.warning(f"Anti-Snipping: Bloqueada aposta de {user_id} (Em partida)")
+            raise HTTPException(400, "Você já está em partida. Apostas fechadas.")
+
     total_odd = round(math.prod([float(i.get('odd', 1.0)) for i in payload.betItems]), 2)
     bet_data = {
-        "userId": user_id, "puuid": acct.get("puuid"), "gameType": payload.betItems[0].get('gameType'),
+        "userId": user_id, "puuid": acct.get("puuid"), "gameType": game_type,
         "betAmount": payload.betAmount, "totalOdd": total_odd, "potentialWinnings": payload.betAmount * total_odd,
         "betItems": payload.betItems, "status": "pending", "createdAt": firestore.SERVER_TIMESTAMP,
         "lastMatchId": riot_api.get_last_match_id(acct.get("puuid"), "lol")
     }
+    
     try:
         transaction = db.transaction()
         res = tx_place_bet(transaction, user_ref, payload.betAmount, bet_data)
@@ -468,7 +504,23 @@ async def disconnect_endpoint(user_id: str = Depends(get_current_user_uid)):
 @app.post("/api/validate-kyc")
 async def validate_kyc_endpoint(payload: ValidationKycRequest, user_id: str = Depends(get_current_user_uid)):
     if not payload.cpf: raise HTTPException(400, "Dados inválidos")
-    db.collection('users').document(user_id).update({"fullname": payload.fullname, "cpf": payload.cpf, "birthdate": payload.birthdate, "kyc_status": "verified"})
+    
+    clean_cpf = _sanitize_cpf(payload.cpf)
+    
+    # --- NOVO: CHECK DE DUPLICIDADE NO KYC ---
+    # Se o usuário tentar validar um CPF que já existe em OUTRA conta
+    existing = list(db.collection('users').where(filter=FieldFilter('cpf', '==', clean_cpf)).limit(1).stream())
+    if existing:
+        # Se encontrou, verifica se não é o PRÓPRIO usuário (caso de re-envio)
+        if existing[0].id != user_id:
+             raise HTTPException(400, "Este CPF já está vinculado a outra conta.")
+
+    db.collection('users').document(user_id).update({
+        "fullname": payload.fullname, 
+        "cpf": clean_cpf, 
+        "birthdate": payload.birthdate, 
+        "kyc_status": "verified"
+    })
     return {"status": "verified"}
 
 @app.post("/api/deposit/generate-pix")

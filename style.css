@@ -36,7 +36,7 @@ body {
     font-family: var(--font-body);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden; /* Evita scroll horizontal indesejado */
+    overflow-x: hidden;
 }
 
 /* --- UTILITÁRIOS DE UI (NOVO DESIGN) --- */
@@ -92,18 +92,74 @@ body {
     border-color: var(--primary-blue);
 }
 
+/* --- STATS GRID (O QUE FALTAVA NA IMAGEM) --- */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
+    width: 100%;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
 /* Tipografia Glitch */
 .glitch-text {
     font-family: var(--font-display);
     font-weight: 900;
-    font-size: 1.5rem; /* Ajustado para mobile */
+    font-size: 2.5rem;
     letter-spacing: 2px;
     color: var(--text-primary);
     text-shadow: 2px 2px var(--accent-pink), -2px -2px var(--accent-cyan);
+    position: relative;
+    display: inline-block;
 }
 
-@media (min-width: 768px) {
+.glitch-text::before, .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-body);
+}
+
+.glitch-text::before {
+    left: 2px;
+    text-shadow: -1px 0 red;
+    clip: rect(24px, 550px, 90px, 0);
+    animation: glitch-anim-2 3s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+    left: -2px;
+    text-shadow: -1px 0 blue;
+    clip: rect(85px, 550px, 140px, 0);
+    animation: glitch-anim-1 2.5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim-1 {
+    0% { clip: rect(20px, 9999px, 80px, 0); }
+    20% { clip: rect(10px, 9999px, 10px, 0); }
+    100% { clip: rect(80px, 9999px, 140px, 0); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip: rect(120px, 9999px, 20px, 0); }
+    20% { clip: rect(100px, 9999px, 100px, 0); }
+    100% { clip: rect(10px, 9999px, 100px, 0); }
+}
+
+@media (max-width: 768px) {
     .glitch-text { font-size: 1.8rem; }
+    .stats-grid { grid-template-columns: 1fr; }
 }
 
 /* Inputs & Botões */
@@ -134,7 +190,7 @@ button {
 
 button:active { transform: scale(0.98); }
 
-/* --- SPA LOGIC (MANTIDA PARA O JS FUNCIONAR) --- */
+/* --- SPA LOGIC --- */
 
 .page {
     display: none;
@@ -153,7 +209,7 @@ button:active { transform: scale(0.98); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Loading Spinner (Tema Novo) */
+/* Loading Spinner */
 .loader {
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-top: 3px solid var(--accent-cyan);
@@ -166,3 +222,18 @@ button:active { transform: scale(0.98); }
 
 /* Modais */
 #modal-backdrop { transition: opacity 0.2s ease; }
+
+/* Custom Scroll */
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+    background: var(--bg-card);
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-purple);
+}

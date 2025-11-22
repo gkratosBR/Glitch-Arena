@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glitch Arena (Alpha)</title>
     
+    <!-- FIX: Favicon vazio para parar erro 404 -->
+    <link rel="icon" href="data:,">
+    
     <!-- Fontes do Novo Tema -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     
     <!-- CSS Atualizado -->
-    <link rel="stylesheet" href="style.css?v=4.0">
-    <script src="https://cdn.tailwindcss.com"></script> <!-- Tailwind para utilitários rápidos -->
+    <link rel="stylesheet" href="style.css?v=4.2">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
 
@@ -21,16 +24,15 @@
         🚧 ALPHA: Layouts e regras sujeitos a alteração. 🚧
     </div>
 
-    <!-- NAVBAR (NOVO) -->
-    <nav class="navbar mt-6"> <!-- mt-6 para compensar o banner -->
+    <!-- NAVBAR -->
+    <nav class="navbar mt-6">
         <div class="logo glitch-text" data-text="GLITCH ARENA">GLITCH ARENA</div>
         
         <div class="nav-controls">
-            <div class="user-info hidden" id="nav-user-info"> <!-- Oculto até logar -->
+            <div class="user-info hidden" id="nav-user-info">
                 <span id="nav-user-name" class="font-bold hidden md:inline">Jogador</span>
                 <span id="nav-user-balance" class="badge">GC 0.00</span>
             </div>
-            <!-- Botão de Tema (Funcionalidade Visual) -->
             <button id="theme-toggle" class="btn-icon" aria-label="Alternar Tema" style="border: 1px solid var(--border-color); padding: 8px; border-radius: 8px;">
                 🌗
             </button>
@@ -43,33 +45,34 @@
         <div class="loader"></div>
     </div>
 
-    <!-- AUTH SHELL (Login/Registro) -->
-    <div id="auth-shell" class="hidden container min-h-[80vh] flex flex-col items-center justify-center">
+    <!-- AUTH SHELL -->
+    <div id="auth-shell" class="hidden container min-h-[80vh] flex flex-col items-center justify-center px-4">
         
         <!-- Landing Page -->
         <div id="landing-page" class="page active w-full text-center">
-            <div class="max-w-2xl mx-auto">
-                <h1 class="glitch-text text-4xl md:text-6xl mb-6">DESAFIE O SISTEMA</h1>
+            <div class="max-w-3xl mx-auto mt-10">
+                <h1 class="glitch-text text-4xl md:text-6xl mb-6" data-text="DESAFIE O SISTEMA">DESAFIE O SISTEMA</h1>
                 <p class="text-[var(--text-secondary)] text-xl mb-8">Aposte na sua própria habilidade em League of Legends.</p>
                 
-                <div class="flex justify-center gap-4">
-                    <button id="auth-login-btn" class="glass-card px-8 py-3 font-bold hover:bg-[var(--bg-card)]">ENTRAR</button>
-                    <button id="auth-register-btn" class="glass-card px-8 py-3 font-bold bg-[var(--primary-purple)] text-white border-none">CRIAR CONTA</button>
+                <div class="flex justify-center gap-4 flex-wrap">
+                    <button id="auth-login-btn" class="glass-card px-8 py-3 font-bold hover:bg-[var(--bg-card)] min-w-[150px]">ENTRAR</button>
+                    <button id="auth-register-btn" class="glass-card px-8 py-3 font-bold bg-[var(--primary-purple)] text-white border-none min-w-[150px]">CRIAR CONTA</button>
                 </div>
             </div>
 
-            <div class="stats-grid mt-16">
-                <div class="card">
+            <!-- FIX: Grid Layout Adicionado no CSS -->
+            <div class="stats-grid mt-16 pb-10">
+                <div class="card hover:border-[var(--accent-cyan)] transition-colors">
                     <span class="stat-label text-[var(--text-secondary)]">Passo 1</span>
                     <h3 class="text-xl font-bold mt-2 text-[var(--accent-cyan)]">Deposite</h3>
                     <p class="text-sm mt-2 text-[var(--text-secondary)]">Compre Glitchcoins via PIX instantâneo.</p>
                 </div>
-                <div class="card">
+                <div class="card hover:border-[var(--primary-purple)] transition-colors">
                     <span class="stat-label text-[var(--text-secondary)]">Passo 2</span>
                     <h3 class="text-xl font-bold mt-2 text-[var(--primary-purple)]">Jogue</h3>
                     <p class="text-sm mt-2 text-[var(--text-secondary)]">Cumpra missões na sua Ranked.</p>
                 </div>
-                <div class="card">
+                <div class="card hover:border-[var(--accent-pink)] transition-colors">
                     <span class="stat-label text-[var(--text-secondary)]">Passo 3</span>
                     <h3 class="text-xl font-bold mt-2 text-[var(--accent-pink)]">Lucre</h3>
                     <p class="text-sm mt-2 text-[var(--text-secondary)]">Saque seus ganhos na hora.</p>
@@ -83,8 +86,11 @@
                 <h2 class="text-2xl font-bold text-center mb-6 font-[var(--font-display)]">LOGIN</h2>
                 <form id="login-form" class="space-y-4">
                     <p id="login-error-msg" class="text-[var(--accent-orange)] text-sm text-center hidden"></p>
-                    <input type="email" id="login-email" class="form-input" placeholder="E-mail" required>
-                    <input type="password" id="login-password" class="form-input" placeholder="Senha" required>
+                    
+                    <!-- FIX: Autocomplete Attributes -->
+                    <input type="email" id="login-email" class="form-input" placeholder="E-mail" autocomplete="email" required>
+                    <input type="password" id="login-password" class="form-input" placeholder="Senha" autocomplete="current-password" required>
+                    
                     <button type="submit" id="login-submit-btn" class="w-full glass-card bg-[var(--primary-blue)] text-white font-bold py-3 mt-4 hover:brightness-110">
                         <span id="login-btn-text">ACESSAR</span>
                         <div id="login-loader" class="loader w-5 h-5 mx-auto hidden"></div>
@@ -113,15 +119,15 @@
                     
                     <!-- Step 1 -->
                     <div id="register-step-1" class="register-step">
-                        <input type="email" id="reg-email" class="form-input" placeholder="E-mail" required>
-                        <input type="password" id="reg-password" class="form-input" placeholder="Senha (min 6)" required>
-                        <input type="password" id="reg-confirm-password" class="form-input" placeholder="Confirmar Senha" required>
+                        <input type="email" id="reg-email" class="form-input" placeholder="E-mail" autocomplete="email" required>
+                        <input type="password" id="reg-password" class="form-input" placeholder="Senha (min 6)" autocomplete="new-password" required>
+                        <input type="password" id="reg-confirm-password" class="form-input" placeholder="Confirmar Senha" autocomplete="new-password" required>
                         <button type="button" id="reg-next-step-1" class="w-full glass-card bg-[var(--primary-purple)] text-white font-bold py-3 mt-2">PRÓXIMO</button>
                     </div>
 
                     <!-- Step 2 -->
                     <div id="register-step-2" class="register-step hidden">
-                        <input type="text" id="reg-fullname" class="form-input" placeholder="Nome Completo" required>
+                        <input type="text" id="reg-fullname" class="form-input" placeholder="Nome Completo" autocomplete="name" required>
                         <input type="text" id="reg-cpf" class="form-input" placeholder="CPF (apenas números)" required>
                         <input type="date" id="reg-birthdate" class="form-input text-[var(--text-secondary)]" required>
                         <input type="text" id="reg-referral" class="form-input uppercase tracking-widest" placeholder="Cód. Convite (Opcional)">
@@ -168,8 +174,8 @@
         </div>
     </div>
 
-    <!-- APP SHELL (Dashboard Principal) -->
-    <div id="app-shell" class="hidden container pb-28">
+    <!-- APP SHELL -->
+    <div id="app-shell" class="hidden container pb-28 px-4">
         
         <!-- Home (Dashboard) -->
         <div id="home-page" class="page">
@@ -191,7 +197,7 @@
                     <div class="ml-auto text-[var(--accent-cyan)] text-2xl">→</div>
                 </div>
 
-                <!-- Game Card: Valorant (Disabled) -->
+                <!-- Game Card: Valorant -->
                 <div class="glass-card p-4 flex items-center gap-4 opacity-50 grayscale cursor-not-allowed">
                     <div class="w-12 h-12 bg-[#FF4655] rounded-lg flex items-center justify-center text-white font-bold">V</div>
                     <div>
@@ -201,7 +207,7 @@
                 </div>
             </section>
 
-            <!-- Status Card (Conexão) -->
+            <!-- Status Card -->
             <section class="card mb-6">
                 <div class="flex justify-between items-center">
                     <div>
@@ -245,14 +251,14 @@
             <h1 class="text-2xl font-bold mb-6 font-[var(--font-display)]">PERFIL</h1>
             
             <!-- Wallet Stats -->
-            <div class="stats-grid mb-8">
+            <div class="stats-grid mb-8" style="margin-top:0;">
                 <div class="card stat-box border-l-4 border-[var(--primary-blue)]">
                     <span class="stat-label text-xs text-[var(--text-secondary)] uppercase">Saldo Real</span>
-                    <span id="wallet-balance" class="stat-value">GC 0.00</span>
+                    <span id="wallet-balance" class="stat-value text-xl font-bold">GC 0.00</span>
                 </div>
                 <div class="card stat-box border-l-4 border-[var(--primary-purple)]">
                     <span class="stat-label text-xs text-[var(--text-secondary)] uppercase">Saldo Bônus</span>
-                    <span id="bonus-balance" class="stat-value text-[var(--primary-purple)]">GC 0.00</span>
+                    <span id="bonus-balance" class="stat-value text-[var(--primary-purple)] text-xl font-bold">GC 0.00</span>
                 </div>
             </div>
 
@@ -265,7 +271,7 @@
             <!-- Rollover -->
             <div id="rollover-container" class="card mb-6 hidden">
                 <div class="flex justify-between text-sm mb-2"><span class="text-[var(--text-secondary)]">Rollover Restante</span><span id="rollover-text" class="font-bold text-[var(--primary-purple)]">GC 0.00</span></div>
-                <div class="progress-container"><div id="rollover-bar" class="progress-bar" style="width:0%"></div></div>
+                <div class="progress-container h-2 bg-[var(--bg-input)] rounded overflow-hidden"><div id="rollover-bar" class="h-full bg-[var(--primary-purple)] transition-all" style="width:0%"></div></div>
                 <button id="convert-bonus-btn" class="w-full mt-4 glass-card py-2 text-xs font-bold opacity-50" disabled>CONVERTER BÔNUS</button>
             </div>
 
@@ -322,7 +328,7 @@
     <!-- MODALS -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 z-[60] backdrop-blur-sm"></div>
 
-    <!-- Generic Modal Structure (Os IDs são usados pelo JS para injetar/controlar) -->
+    <!-- Generic Modal Structure -->
     <!-- Deposit -->
     <div id="deposit-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="card w-full max-w-sm pointer-events-auto relative">
@@ -395,7 +401,7 @@
         <div class="card w-full max-w-sm pointer-events-auto">
             <h3 class="font-bold text-lg mb-6 font-[var(--font-display)]">DADOS PESSOAIS</h3>
             <form id="kyc-form" class="space-y-3">
-                <input id="kyc-modal-fullname" class="form-input" placeholder="Nome Completo" required>
+                <input id="kyc-modal-fullname" class="form-input" placeholder="Nome Completo" autocomplete="name" required>
                 <input id="kyc-modal-cpf" class="form-input" placeholder="CPF" required>
                 <input type="date" id="kyc-modal-birthdate" class="form-input text-[var(--text-secondary)]" required>
                 <p id="kyc-error-msg" class="text-[var(--accent-orange)] text-xs hidden text-center"></p>
@@ -474,9 +480,8 @@
         <div id="message-modal-content" class="px-6 py-3 rounded-full shadow-[var(--shadow-glow)] font-bold text-sm border border-[var(--border-color)] backdrop-blur-md"></div>
     </div>
 
-    <!-- JS v3.4 -->
-    <script type="module" src="app.js?v=3.4"></script>
-    <!-- Script de Tema (Simples, Inline para evitar flash) -->
+    <!-- JS v4.2 -->
+    <script type="module" src="app.js?v=4.2"></script>
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle');
         if(themeToggleBtn) {
@@ -487,7 +492,6 @@
                 html.setAttribute('data-theme', next);
                 localStorage.setItem('theme', next);
             });
-            // Init
             const saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
         }

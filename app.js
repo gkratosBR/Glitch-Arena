@@ -69,7 +69,7 @@ async function fetchWithAuth(endpoint, options = {}) {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> App v4.1 (Full Fixed) Iniciando...");
+    console.log(">>> App v4.2 (UI/UX Fixes) Iniciando...");
     initTheme();
     initializeMainApp();
     setupAuthListeners();
@@ -230,7 +230,7 @@ function setupAppListeners() {
 
     document.getElementById('back-to-home').addEventListener('click', () => navigateApp('home-page'));
     
-    // Connect (AQUI ESTAVA O ERRO - FUNÇÕES AGORA EXISTEM)
+    // Connect
     document.querySelectorAll('.connect-btn').forEach(btn => btn.addEventListener('click', (e) => openConnectModal(e.target.dataset.game)));
     document.getElementById('connect-modal-cancel').addEventListener('click', () => toggleModal('connect-modal', false));
     document.getElementById('connect-modal-submit').addEventListener('click', handleSubmitConnection);
@@ -240,7 +240,7 @@ function setupAppListeners() {
         btn.classList.toggle('opacity-50', !e.target.checked);
     });
 
-    // Bets
+    // Bets (FIX: openBetSlipModal agora existe)
     document.getElementById('bet-slip-fab').addEventListener('click', openBetSlipModal);
     document.getElementById('bet-slip-modal-close').addEventListener('click', () => toggleModal('bet-slip-modal', false));
     document.getElementById('bet-amount-input').addEventListener('input', updateBetSlipSummary);
@@ -250,7 +250,13 @@ function setupAppListeners() {
     document.getElementById('open-request-bet-modal').addEventListener('click', openRequestBetModal);
     document.getElementById('request-modal-cancel').addEventListener('click', () => toggleModal('request-bet-modal', false));
     document.getElementById('request-modal-submit').addEventListener('click', handleRequestBet);
-    document.getElementById('request-add-to-slip').addEventListener('click', handleAddCustomBetToSlip);
+    
+    // FIX: Listener correto para adicionar custom bet
+    const addCustomBtn = document.getElementById('request-add-to-slip');
+    if(addCustomBtn) {
+         addCustomBtn.addEventListener('click', handleAddCustomBetToSlip);
+    }
+    
     document.getElementById('request-try-again').addEventListener('click', resetRequestModal);
 
     // KYC
@@ -286,8 +292,258 @@ function setupAppListeners() {
     document.getElementById('convert-bonus-btn').addEventListener('click', handleConvertBonus);
 }
 
-// --- FUNÇÕES QUE FALTAVAM (AGORA INCLUÍDAS) ---
+// --- BET SLIP LOGIC (QUE ESTAVA FALTANDO/INCOMPLETA) ---
 
+function openBetSlipModal() {
+    renderBetSlip();
+    updateBetSlipSummary();
+    toggleModal('bet-slip-modal', true);
+}
+
+function renderBetSlip() {
+    const list = document.getElementById('bet-slip-list');
+    list.innerHTML = '';
+
+    if (appState.betSlip.length === 0) {
+        list.innerHTML = '<p class="text-center text-[var(--text-secondary)] text-sm mt-4">Nenhum desafio selecionado.</p>';
+        return;
+    }
+
+    appState.betSlip.forEach((bet, index) => {
+        const item = document.createElement('div');
+        item.className = 'glass-card p-3 mb-2 flex justify-between items-center';
+        item.innerHTML = `
+            <div>
+                <p class="font-bold text-sm text-white">${bet.title}</p>
+                <p class="text-xs text-[var(--text-secondary)]">${bet.gameType === 'lol' ? 'League of Legends' : bet.gameType}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-[var(--primary-purple)] font-bold">${bet.odd.toFixed(2)}x</span>
+                <button class="text-red-400 font-bold hover:text-red-500" data-index="${index}">×</button>
+            </div>
+        `;
+        item.querySelector('button').addEventListener('click', () => removeBetSlipItem(index));
+        list.appendChild(item);
+    });
+}
+
+function removeBetSlipItem(index) {
+    appState.betSlip.splice(index, 1);
+    updateBetSlipCount();
+    renderBetSlip();
+    updateBetSlipSummary();
+}
+
+function updateBetSlipCount() {
+    const count = appState.betSlip.length;
+    const el = document.getElementById('bet-slip-count');
+    if (el) {
+        el.textContent = count;
+        el.classList.toggle('hidden', count === 0);
+    }
+    // Mostra/Esconde botão flutuante se estiver logado
+    const fab = document.getElementById('bet-slip-fab');
+    if (fab && appState.currentUser) {
+        fab.classList.toggle('hidden', count === 0);
+    }
+}
+
+function updateBetSlipSummary() {
+    const totalOdd = appState.betSlip.reduce((acc, bet) => acc * bet.odd, 1);
+    const amount = parseFloat(document.getElementById('bet-amount-input').value) || 0;
+    
+    document.getElementById('bet-slip-total-odd').textContent = `${totalOdd.toFixed(2)}x`;
+    document.getElementById('bet-potential-winnings').textContent = `GC ${(amount * totalOdd).toFixed(2)}`;
+
+    // Validação de Limite
+    const limitInfo = document.getElementById('bet-slip-limit-info');
+    if (amount > appState.currentBetLimit) {
+        limitInfo.textContent = `Limite atual: GC ${appState.currentBetLimit.toFixed(2)}`;
+        limitInfo.classList.remove('hidden');
+        document.getElementById('place-bet-btn').disabled = true;
+        document.getElementById('place-bet-btn').classList.add('opacity-50');
+    } else {
+        limitInfo.classList.add('hidden');
+        document.getElementById('place-bet-btn').disabled = false;
+        document.getElementById('place-bet-btn').classList.remove('opacity-50');
+    }
+}
+
+function toggleBetSlipItem(challenge) {
+    const idx = appState.betSlip.findIndex(b => b.id === challenge.id);
+    if (idx >= 0) {
+        appState.betSlip.splice(idx, 1);
+    } else {
+        // Verifica conflitos (ex: não pode apostar em Over kills e Under kills ao mesmo tempo se conflitarem)
+        const conflict = appState.betSlip.find(b => b.conflictKey === challenge.conflictKey);
+        if (conflict) {
+            showMessage("Conflito com aposta existente!", 'error');
+            return;
+        }
+        appState.betSlip.push(challenge);
+        showMessage("Adicionado ao boletim!", 'success');
+    }
+    updateBetSlipCount();
+}
+
+async function handlePlaceBet() {
+    const amount = parseFloat(document.getElementById('bet-amount-input').value);
+    if (!amount || amount <= 0) return showError("Valor inválido.");
+    if (appState.betSlip.length === 0) return showError("Selecione desafios.");
+    
+    toggleLoading('place-bet', true);
+    document.getElementById('place-bet-btn').classList.add('hidden');
+
+    try {
+        const res = await fetchWithAuth('/api/place-bet', {
+            method: 'POST',
+            body: JSON.stringify({
+                betAmount: amount,
+                betItems: appState.betSlip
+            })
+        });
+        
+        appState.wallet = res.newWallet;
+        appState.bonus_wallet = res.newBonusWallet;
+        updateUI();
+        
+        appState.betSlip = [];
+        updateBetSlipCount();
+        toggleModal('bet-slip-modal', false);
+        showMessage("Aposta Confirmada! Boa sorte.", 'success');
+        navigateApp('bets-page'); // Vai para aba de apostas ativas
+        
+    } catch (e) {
+        document.getElementById('bet-slip-error-msg').textContent = e.message;
+        document.getElementById('bet-slip-error-msg').classList.remove('hidden');
+    } finally {
+        toggleLoading('place-bet', false);
+        document.getElementById('place-bet-btn').classList.remove('hidden');
+    }
+}
+
+// --- GAME LOGIC ---
+
+async function selectGame(gameType) {
+    if (!appState.currentUser) return showError("Faça login primeiro.");
+    
+    appState.currentGame = gameType;
+    toggleShells('app');
+    navigateApp('challenges-page');
+    
+    const list = document.getElementById('challenges-list');
+    list.innerHTML = '<div class="loader mx-auto"></div>';
+    document.getElementById('challenges-subtitle').textContent = "Analisando seu perfil...";
+
+    try {
+        const challenges = await fetchWithAuth('/api/get-challenges', { method: 'POST', body: JSON.stringify({ gameType }) });
+        renderChallenges(challenges);
+    } catch (e) {
+        list.innerHTML = `<p class="text-center text-red-400 p-4 border border-red-500/20 rounded bg-red-500/10">${e.message}</p>`;
+        if(e.message.includes("Não conectado")) {
+            // Se erro for falta de conexão, mostra botão
+             list.innerHTML += `<div class="text-center mt-4"><button class="connect-btn glass-card px-4 py-2 font-bold" data-game="${gameType}">CONECTAR AGORA</button></div>`;
+             // Re-attach listener pq o HTML foi injetado dinamicamente
+             list.querySelector('.connect-btn').addEventListener('click', () => openConnectModal(gameType));
+        }
+    }
+}
+
+function renderChallenges(challenges) {
+    const list = document.getElementById('challenges-list');
+    list.innerHTML = '';
+    
+    // Mostra opção de custom bet
+    document.getElementById('request-bet-card').classList.remove('hidden');
+
+    challenges.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'glass-card p-4 flex justify-between items-center hover:border-[var(--primary-purple)] transition cursor-pointer group';
+        const isSelected = appState.betSlip.some(b => b.id === c.id);
+        
+        if (isSelected) el.classList.add('border-[var(--primary-purple)]', 'bg-[var(--bg-input)]');
+        
+        el.innerHTML = `
+            <div>
+                <h4 class="font-bold group-hover:text-[var(--primary-purple)] transition">${c.title}</h4>
+                <p class="text-xs text-[var(--text-secondary)]">Multiplicador</p>
+            </div>
+            <div class="text-right">
+                <span class="text-2xl font-bold font-[var(--font-display)] ${isSelected ? 'text-[var(--primary-purple)]' : 'text-white'}">${c.odd.toFixed(2)}x</span>
+            </div>
+        `;
+        el.addEventListener('click', () => {
+            toggleBetSlipItem(c);
+            renderChallenges(challenges); // Re-render para atualizar estado visual
+        });
+        list.appendChild(el);
+    });
+}
+
+async function fetchAndRenderActiveBets() {
+    const list = document.getElementById('active-bets-list');
+    list.innerHTML = '<div class="loader mx-auto"></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-active-bets');
+        if (bets.length === 0) {
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center">Nenhuma aposta ativa.</p>';
+            return;
+        }
+        list.innerHTML = bets.map(b => `
+            <div class="glass-card p-4 border-l-4 border-yellow-500">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs text-yellow-500 font-bold uppercase">Em Andamento</span>
+                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <div class="mb-3">
+                    ${b.betItems.map(i => `<p class="font-bold text-sm">• ${i.title} (${i.odd}x)</p>`).join('')}
+                </div>
+                <div class="flex justify-between items-end border-t border-[var(--border-color)] pt-2">
+                    <div>
+                        <p class="text-xs text-[var(--text-secondary)]">Apostado</p>
+                        <p class="font-bold">GC ${b.betAmount.toFixed(2)}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-[var(--text-secondary)]">Retorno</p>
+                        <p class="font-bold text-[var(--accent-cyan)]">GC ${b.potentialWinnings.toFixed(2)}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
+}
+
+async function fetchAndRenderHistoryBets() {
+    const list = document.getElementById('history-bets-list');
+    list.innerHTML = '<div class="loader mx-auto"></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-history-bets');
+        if (bets.length === 0) {
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center">Histórico vazio.</p>';
+            return;
+        }
+        list.innerHTML = bets.map(b => {
+            const color = b.status === 'won' ? 'green' : (b.status === 'void' ? 'gray' : 'red');
+            const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
+            return `
+            <div class="glass-card p-4 border-l-4 border-${color}-500 opacity-80 hover:opacity-100 transition">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs text-${color}-500 font-bold uppercase">${statusTxt}</span>
+                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.resolvedAt || b.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div class="mb-2">
+                    ${b.betItems.map(i => `<p class="text-sm">• ${i.title}</p>`).join('')}
+                </div>
+                 <div class="flex justify-between font-bold">
+                    <span>${b.status === 'won' ? '+' : '-'} GC ${b.status === 'won' ? (b.potentialWinnings - b.betAmount).toFixed(2) : b.betAmount.toFixed(2)}</span>
+                    <span class="text-xs text-[var(--text-secondary)] self-center">${b.totalOdd}x</span>
+                </div>
+            </div>
+        `}).join('');
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
+}
+
+// --- UI HELPERS & BOILERPLATE ---
 function openConnectModal(gameType) {
     appState.currentGame = gameType;
     document.getElementById('connect-modal-title').textContent = `CONECTAR ${gameType === 'lol' ? 'LoL' : ''}`;
@@ -312,22 +568,12 @@ async function handleSubmitConnection() {
         appState.connectedAccounts = userData.connectedAccounts;
         updateUI();
         toggleModal('connect-modal', false);
-        showMessage("Conectado!", 'success');
+        showMessage("Conectado! Aguarde processamento...", 'success');
     } catch (e) {
         toggleError('connect', e.message);
     } finally {
         toggleLoading('connect', false);
     }
-}
-
-async function handleDisconnect(gameType) {
-    try {
-        await fetchWithAuth('/api/disconnect', { method: 'POST', body: JSON.stringify({ gameType }) });
-        delete appState.connectedAccounts[gameType];
-        updateUI();
-        if (appState.currentGame === gameType) selectGame(gameType);
-        showMessage("Desconectado.", 'success');
-    } catch (e) { showError(e.message); }
 }
 
 async function handleKycSubmit(e) {
@@ -337,7 +583,7 @@ async function handleKycSubmit(e) {
     const birthdate = document.getElementById('kyc-modal-birthdate').value;
     if (!fullname || !cpf || !birthdate) return toggleError('kyc', "Preencha tudo.");
     
-    toggleLoading('kyc', true); // Corrigido prefixo
+    toggleLoading('kyc', true); 
     try {
         appState.kycData = await fetchWithAuth('/api/validate-kyc', { method: 'POST', body: JSON.stringify({ fullname, cpf, birthdate }) });
         updateUI();
@@ -448,11 +694,8 @@ async function handleRequestBet() {
         document.getElementById('request-result-odd').textContent = c.odd.toFixed(2) + 'x';
         
         const addBtn = document.getElementById('request-add-to-slip');
-        // Remove listeners antigos para evitar duplicação (clone)
-        const newBtn = addBtn.cloneNode(true);
-        addBtn.parentNode.replaceChild(newBtn, addBtn);
-        
-        newBtn.onclick = () => {
+        // Usar uma nova função em vez de substituir onclick para evitar problemas de escopo/closure
+        addBtn.onclick = function() {
             toggleBetSlipItem(c);
             toggleModal('request-bet-modal', false);
         };
@@ -462,13 +705,13 @@ async function handleRequestBet() {
     } catch (e) { toggleError('request', e.message); } finally { toggleLoading('request', false); }
 }
 
+function handleAddCustomBetToSlip() {
+    // A lógica real está no onclick atribuído dinamicamente acima
+}
+
 function resetRequestModal() {
     document.getElementById('request-result-container').classList.add('hidden');
     document.getElementById('request-form-container').classList.remove('hidden');
-}
-
-function handleAddCustomBetToSlip(e) {
-    // Função vazia pois a lógica foi movida para dentro do handleRequestBet
 }
 
 // --- REGISTRO & UI HELPERS ---
@@ -508,7 +751,6 @@ function goToRegisterStep(step) {
     [1, 2, 3].forEach(i => {
         const el = document.getElementById(`step-ind-${i}`);
         if (el) {
-            // Cores do novo tema
             el.className = i === step ? 'text-[var(--primary-purple)] font-bold text-xs' : 'text-[var(--text-secondary)] text-xs';
         }
     });
@@ -615,4 +857,99 @@ function updateUI() {
     updateProfileUI();
     updateRolloverUI();
     updateNavbarUI();
+}
+
+function updateWalletUI() {
+    const walletEl = document.getElementById('wallet-balance');
+    const bonusEl = document.getElementById('bonus-balance');
+    const navBal = document.getElementById('nav-user-balance');
+    
+    if(walletEl) walletEl.textContent = `GC ${appState.wallet.toFixed(2)}`;
+    if(bonusEl) bonusEl.textContent = `GC ${appState.bonus_wallet.toFixed(2)}`;
+    if(navBal) navBal.textContent = `GC ${(appState.wallet + appState.bonus_wallet).toFixed(2)}`;
+}
+
+function updateProfileUI() {
+    document.getElementById('kyc-fullname').textContent = appState.kycData.fullname || '-';
+    document.getElementById('kyc-cpf').textContent = appState.kycData.cpf || '-';
+    
+    const kycBadge = document.getElementById('kyc-status');
+    const kycBtn = document.getElementById('kyc-verify-btn');
+    
+    if (appState.kycData.kyc_status === 'verified') {
+        kycBadge.textContent = 'VERIFICADO';
+        kycBadge.className = 'text-[10px] font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/50';
+        kycBtn.classList.add('hidden');
+    } else {
+        kycBadge.textContent = 'PENDENTE';
+        kycBtn.classList.remove('hidden');
+        kycBtn.addEventListener('click', () => toggleModal('kyc-modal', true));
+    }
+    
+    // Status de conexão
+    const lolStatus = document.getElementById('lol-status');
+    const lolBtn = document.getElementById('lol-connect-btn');
+    
+    if (appState.connectedAccounts['lol']) {
+        lolStatus.textContent = appState.connectedAccounts['lol'].playerId;
+        lolStatus.className = 'text-green-400 font-bold mt-1';
+        lolBtn.textContent = 'DESCONECTAR';
+        lolBtn.classList.replace('bg-[var(--primary-blue)]', 'bg-red-600');
+        // Usar clone para limpar listeners antigos
+        const newBtn = lolBtn.cloneNode(true);
+        lolBtn.parentNode.replaceChild(newBtn, lolBtn);
+        newBtn.addEventListener('click', () => handleDisconnect('lol'));
+    } else {
+        lolStatus.textContent = 'Desconectado';
+        lolStatus.className = 'text-[var(--accent-orange)] font-bold mt-1';
+        // Reset botão
+        lolBtn.textContent = 'CONECTAR';
+        const newBtn = lolBtn.cloneNode(true);
+        lolBtn.parentNode.replaceChild(newBtn, lolBtn);
+        newBtn.addEventListener('click', () => openConnectModal('lol'));
+    }
+}
+
+function updateRolloverUI() {
+    const container = document.getElementById('rollover-container');
+    if (appState.rollover_target > 0) {
+        container.classList.remove('hidden');
+        document.getElementById('rollover-text').textContent = `GC ${appState.rollover_target.toFixed(2)}`;
+        const percent = Math.min(100, (1 - (appState.rollover_target / (appState.bonus_wallet * 20))) * 100); // Estimativa visual
+        document.getElementById('rollover-bar').style.width = `${percent}%`;
+        
+        const btn = document.getElementById('convert-bonus-btn');
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        btn.textContent = `Falta GC ${appState.rollover_target.toFixed(2)}`;
+    } else if (appState.bonus_wallet > 0) {
+        container.classList.remove('hidden');
+        document.getElementById('rollover-text').textContent = "LIBERADO";
+        document.getElementById('rollover-bar').style.width = "100%";
+        document.getElementById('rollover-bar').style.backgroundColor = "#4ade80"; // green
+        
+        const btn = document.getElementById('convert-bonus-btn');
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        btn.textContent = "CONVERTER BÔNUS";
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+function updateNavbarUI() {
+    const userInfo = document.getElementById('nav-user-info');
+    const loginBtn = document.getElementById('auth-login-btn'); // Botão na landing, não navbar
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    if (appState.currentUser) {
+        userInfo.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        if(loginBtn) loginBtn.classList.add('hidden'); // Esconde na landing
+        document.getElementById('nav-user-name').textContent = appState.currentUser.email.split('@')[0];
+    } else {
+        userInfo.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        if(loginBtn) loginBtn.classList.remove('hidden');
+    }
 }
