@@ -257,11 +257,6 @@ def tx_place_bet(transaction, user_ref, amount, bet_data):
     data = snap.to_dict()
     wallet, bonus = data.get("wallet", 0.0), data.get("bonus_wallet", 0.0)
     if (wallet + bonus) < amount: raise ValueError(f"Glitchcoins insuficientes.")
-    
-    # Proteção Anti-Duplicação Simplificada
-    last_bet = data.get('lastBetPlacedAt')
-    # ... (Lógica de debounce omitida para brevidade, mas o framework está pronto) ...
-
     real_deduct = min(wallet, amount)
     bonus_deduct = amount - real_deduct
     updates = {
@@ -325,7 +320,7 @@ def tx_resolve_bet(transaction, bet_ref, user_ref, bet_data, result):
     transaction.update(user_ref, up_user)
     transaction.update(bet_ref, up_bet)
 
-# --- ENDPOINTS ---
+# --- ROTAS ---
 
 @app.post("/api/init-user")
 async def init_user(payload: InitUserRequest, user_id: str = Depends(get_current_user_uid)):
@@ -362,9 +357,11 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
         ref.set(new_user_data)
         data = new_user_data
     else: data = doc.to_dict()
+
     config = get_platform_config()
     limit = _calculate_user_bet_limit(data, config)
     if limit != data.get('currentBetLimit'): ref.update({'currentBetLimit': limit}); data['currentBetLimit'] = limit
+    
     return {
         "wallet": data.get("wallet", 0.0), "bonus_wallet": data.get("bonus_wallet", 0.0),
         "rollover_target": max(0, data.get("rollover_target", 0.0)), "connectedAccounts": data.get("connectedAccounts", {}),
@@ -491,6 +488,7 @@ async def get_history_bets(user_id: str = Depends(get_current_user_uid)):
     docs = db.collection('bets').where(filter=FieldFilter('userId', '==', user_id)).where(filter=FieldFilter('status', 'in', ["won", "lost", "void"])).stream()
     return [{**d.to_dict(), 'id': d.id, 'createdAt': str(d.to_dict().get('createdAt', '')), 'resolvedAt': str(d.to_dict().get('resolvedAt', ''))} for d in docs]
 
+# --- ADMIN ROUTES ---
 @app.post("/api/admin/set-admin")
 async def set_admin_claim(req: Request, uid: str = Depends(verify_admin)):
     data = await req.json()
@@ -505,25 +503,39 @@ async def get_dashboard_stats(uid: str = Depends(verify_admin)):
 
 @app.get("/api/admin/advanced-stats")
 async def get_advanced_stats(uid: str = Depends(verify_admin)):
+    """
+    Gera estatísticas avançadas incluindo HOLDING (Saldos dos Usuários).
+    """
     try:
         start = time.time()
+        
+        # 1. Busca APOSTAS
         all_bets = list(db.collection('bets').stream())
         pending_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'pending']
         won_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'won']
         lost_bets = [b.to_dict() for b in all_bets if b.to_dict().get('status') == 'lost']
+        
+        # 2. Busca USUÁRIOS (Novo: Para calcular Holding)
         all_users = list(db.collection('users').stream())
         
+        # 3. Cálculos de APOSTAS
         pending_vol = sum(b.get('betAmount', 0) for b in pending_bets)
         liability = sum(b.get('potentialWinnings', 0) for b in pending_bets)
+        
+        # Separação Dinheiro vs Bônus nas Apostas (Se existir no doc)
         pending_real = sum(b.get('split_stake', {}).get('real', b.get('betAmount', 0)) for b in pending_bets)
         pending_bonus = sum(b.get('split_stake', {}).get('bonus', 0) for b in pending_bets)
+
         won_val = sum(b.get('potentialWinnings', 0) for b in won_bets)
         lost_val = sum(b.get('betAmount', 0) for b in lost_bets)
+        
         avg_ticket = (pending_vol + lost_val + sum(b.get('betAmount', 0) for b in won_bets)) / len(all_bets) if all_bets else 0.0
         
+        # 4. Cálculos de HOLDING (Saldos Parados)
         total_user_wallet = 0.0
         total_user_bonus = 0.0
         users_with_balance = 0
+        
         for u_doc in all_users:
             u = u_doc.to_dict()
             w = u.get('wallet', 0.0)
@@ -532,6 +544,7 @@ async def get_advanced_stats(uid: str = Depends(verify_admin)):
             total_user_bonus += b
             if w > 0 or b > 0: users_with_balance += 1
             
+        # 5. Riscos
         high_risk = sorted(pending_bets, key=lambda x: x.get('potentialWinnings', 0), reverse=True)[:5]
         top_risk = [{
             "user": b.get('userId'), 
@@ -541,20 +554,35 @@ async def get_advanced_stats(uid: str = Depends(verify_admin)):
         } for b in high_risk]
 
         logger.info(f"Advanced Stats gerado em {time.time() - start:.2f}s")
+
         return {
             "pending": {
-                "count": len(pending_bets), "volume_total": pending_vol, "volume_real": pending_real, "volume_bonus": pending_bonus, "liability": liability
+                "count": len(pending_bets),
+                "volume_total": pending_vol,
+                "volume_real": pending_real,
+                "volume_bonus": pending_bonus,
+                "liability": liability
             },
             "holding": {
-                "total_real": total_user_wallet, "total_bonus": total_user_bonus, "users_with_balance": users_with_balance
+                "total_real": total_user_wallet,  # Dinheiro na mão dos users
+                "total_bonus": total_user_bonus,  # Crédito fictício
+                "users_with_balance": users_with_balance
             },
             "history": {
-                "won_count": len(won_bets), "won_val": won_val, "lost_count": len(lost_bets), "lost_val": lost_val, "house_profit": lost_val - won_val
+                "won_count": len(won_bets), "won_val": won_val,
+                "lost_count": len(lost_bets), "lost_val": lost_val,
+                "house_profit": lost_val - won_val
             },
-            "metrics": { "avg_ticket": avg_ticket, "total_users": len(all_users) },
+            "metrics": {
+                "avg_ticket": avg_ticket,
+                "total_users": len(all_users)
+            },
             "top_risk": top_risk
         }
-    except Exception as e: logger.error(f"Erro stats: {e}"); raise HTTPException(500, "Erro ao gerar estatísticas")
+        
+    except Exception as e:
+        logger.error(f"Erro stats: {e}")
+        raise HTTPException(500, "Erro ao gerar estatísticas")
 
 @app.get("/api/admin/get-config")
 async def get_config_route(uid: str = Depends(verify_admin)): return get_platform_config()
@@ -607,6 +635,11 @@ def _resolve_bets_logic():
                     logger.info(f"RESOLVIDO: {doc.id} -> {res['status']}")
             except Exception as e: logger.error(f"Erro desafio {doc.id}: {e}")
     except Exception as e: logger.critical(f"FALHA SCHEDULER: {e}")
+
+# --- ROTA DE VERIFICAÇÃO RIOT ---
+@app.get("/riot.txt")
+async def serve_riot_verification():
+    return FileResponse("riot.txt", media_type="text/plain")
 
 # --- STATIC ---
 @app.get("/")
