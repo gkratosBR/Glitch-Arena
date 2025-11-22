@@ -5,7 +5,10 @@ import {
     setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-// --- 1. CONFIGURAÇÃO ---
+// ============================================================================
+// 1. CONFIGURAÇÃO & ESTADO GLOBAL
+// ============================================================================
+
 const firebaseConfig = {
     apiKey: "AIzaSyCb3csf_fKDif-PwQXfTf6P_aolbK4Dm3Y",
     authDomain: "primegame-7cea1.firebaseapp.com",
@@ -39,9 +42,9 @@ const appState = {
     myReferralCode: ''
 };
 
-// ==================================================
-// 2. FUNÇÕES AUXILIARES DE UI (BASE)
-// ==================================================
+// ============================================================================
+// 2. FUNÇÕES DE UI & UTILITÁRIOS (DEFINIDAS PRIMEIRO)
+// ============================================================================
 
 function toggleLoading(prefix, show) {
     const loader = document.getElementById(`${prefix}-loader`);
@@ -105,7 +108,7 @@ function toggleShells(mode) {
     const authShell = document.getElementById('auth-shell');
     const appShell = document.getElementById('app-shell');
 
-    if(loading) loading.classList.add('hidden');
+    if(loading) loading.classList.add('hidden'); // Garante que o loading suma
 
     if (mode === 'app') {
         if(authShell) authShell.classList.replace('flex', 'hidden');
@@ -116,9 +119,7 @@ function toggleShells(mode) {
     }
 }
 
-// ==================================================
-// 3. ATUALIZAÇÃO DE INTERFACE (UI UPDATES)
-// ==================================================
+// --- ATUALIZAÇÃO DE ELEMENTOS VISUAIS ---
 
 function updateNavbarUI() {
     const userInfo = document.getElementById('nav-user-info');
@@ -127,6 +128,7 @@ function updateNavbarUI() {
     const desktopNav = document.getElementById('desktop-nav');
     
     if (appState.currentUser) {
+        // LOGADO
         if(userInfo) userInfo.classList.remove('hidden');
         if(logoutBtn) logoutBtn.classList.remove('hidden');
         if(loginBtn) loginBtn.classList.add('hidden');
@@ -141,6 +143,7 @@ function updateNavbarUI() {
             nameEl.textContent = appState.currentUser.email.split('@')[0];
         }
     } else {
+        // DESLOGADO
         if(userInfo) userInfo.classList.add('hidden');
         if(logoutBtn) logoutBtn.classList.add('hidden');
         if(loginBtn) loginBtn.classList.remove('hidden');
@@ -182,7 +185,6 @@ function updateProfileUI() {
         }
     }
     
-    // Status Conexão LoL
     const lolStatus = document.getElementById('lol-status');
     const lolBtn = document.getElementById('lol-connect-btn');
     
@@ -250,105 +252,9 @@ function updateUI() {
     updateNavbarUI();
 }
 
-// ==================================================
-// 4. FUNÇÕES DE API & LÓGICA (DEFINIDAS ANTES DO USO)
-// ==================================================
-
-async function fetchWithAuth(endpoint, options = {}) {
-    if (!appState.currentUser) {
-        if (auth.currentUser) appState.currentUser = auth.currentUser;
-        else throw new Error("Aguardando autenticação...");
-    }
-    
-    let idToken = await appState.currentUser.getIdToken();
-    options.headers = { ...options.headers, 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' };
-    
-    let response = await fetch(`${API_URL}${endpoint}`, options);
-    
-    if (response.status === 401) {
-        try {
-            idToken = await appState.currentUser.getIdToken(true);
-            options.headers['Authorization'] = `Bearer ${idToken}`;
-            response = await fetch(`${API_URL}${endpoint}`, options);
-        } catch (e) { throw new Error("Sessão expirada."); }
-    }
-
-    if (!response.ok) {
-        try {
-            const data = await response.json();
-            throw new Error(data.detail || data.error || `Erro ${response.status}`);
-        } catch (e) { throw new Error(e.message || `Erro ${response.status}`); }
-    }
-    return response.json();
-}
-
-async function fetchAndRenderActiveBets() {
-    const list = document.getElementById('active-bets-list');
-    if(!list) return;
-    list.innerHTML = '<div class="loader mx-auto"></div>';
-    try {
-        const bets = await fetchWithAuth('/api/get-active-bets');
-        if (bets.length === 0) {
-            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Nenhuma missão ativa no momento.</p>';
-            return;
-        }
-        list.innerHTML = bets.map(b => `
-            <div class="glass-card p-4 border-l-4 border-yellow-500 bg-white/5">
-                <div class="flex justify-between mb-2">
-                    <span class="text-xs text-yellow-500 font-bold uppercase tracking-wider">Em Andamento</span>
-                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.createdAt).toLocaleTimeString()}</span>
-                </div>
-                <div class="mb-3 space-y-1">
-                    ${b.betItems.map(i => `<p class="font-bold text-sm text-white">• ${i.title} <span class="text-[var(--primary-purple)]">(${i.odd}x)</span></p>`).join('')}
-                </div>
-                <div class="flex justify-between items-end border-t border-white/10 pt-2">
-                    <div>
-                        <p class="text-xs text-[var(--text-secondary)] uppercase">Valor</p>
-                        <p class="font-bold text-white">${(b.betAmount * EXCHANGE_RATE).toFixed(0)} GC</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs text-[var(--text-secondary)] uppercase">Loot</p>
-                        <p class="font-bold text-[var(--accent-cyan)] font-[Orbitron]">${(b.potentialWinnings * EXCHANGE_RATE).toFixed(0)} GC</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
-}
-
-async function fetchAndRenderHistoryBets() {
-    const list = document.getElementById('history-bets-list');
-    if(!list) return;
-    list.innerHTML = '<div class="loader mx-auto"></div>';
-    try {
-        const bets = await fetchWithAuth('/api/get-history-bets');
-        if (bets.length === 0) {
-            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Histórico vazio.</p>';
-            return;
-        }
-        list.innerHTML = bets.map(b => {
-            const borderColor = b.status === 'won' ? 'border-green-500' : (b.status === 'void' ? 'border-gray-500' : 'border-red-500');
-            const textColor = b.status === 'won' ? 'text-green-500' : (b.status === 'void' ? 'text-gray-500' : 'text-red-500');
-            const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
-            const winAmountGC = (b.status === 'won' ? (b.potentialWinnings - b.betAmount) : b.betAmount) * EXCHANGE_RATE;
-            
-            return `
-            <div class="glass-card p-4 border-l-4 ${borderColor} bg-white/5 hover:bg-white/10 transition-colors">
-                <div class="flex justify-between mb-2">
-                    <span class="text-xs ${textColor} font-bold uppercase tracking-wider">${statusTxt}</span>
-                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.resolvedAt || b.createdAt).toLocaleDateString()}</span>
-                </div>
-                <div class="mb-2">
-                    ${b.betItems.map(i => `<p class="text-sm text-white">• ${i.title}</p>`).join('')}
-                </div>
-                 <div class="flex justify-between font-bold items-center">
-                    <span class="${textColor} font-[Orbitron] text-lg">${b.status === 'won' ? '+' : '-'} ${winAmountGC.toFixed(0)} GC</span>
-                    <span class="text-xs text-[var(--text-secondary)] px-2 py-1 bg-black/30 rounded border border-white/10">${b.totalOdd}x</span>
-                </div>
-            </div>
-        `}).join('');
-    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
-}
+// ============================================================================
+// 3. NAVEGAÇÃO
+// ============================================================================
 
 function navigateAuth(pageId) {
     document.querySelectorAll('#auth-shell .page').forEach(p => p.classList.remove('active'));
@@ -398,66 +304,38 @@ function navigateApp(pageId) {
     if (pageId === 'history-page') fetchAndRenderHistoryBets();
 }
 
-function openConnectModal(gameType) {
-    appState.currentGame = gameType;
-    const title = document.getElementById('connect-modal-title');
-    const input = document.getElementById('riot-id-input');
-    const check = document.getElementById('connect-terms-check');
-    const btn = document.getElementById('connect-modal-submit');
-    
-    if(title) title.textContent = `CONECTAR ${gameType === 'lol' ? 'LoL' : ''}`;
-    if(input) {
-        const acc = appState.connectedAccounts[gameType];
-        input.value = acc?.playerId || '';
+// ============================================================================
+// 4. AÇÕES DE API E LÓGICA (AGORA ANTES DOS LISTENERS)
+// ============================================================================
+
+async function fetchWithAuth(endpoint, options = {}) {
+    if (!appState.currentUser) {
+        if (auth.currentUser) appState.currentUser = auth.currentUser;
+        else throw new Error("Aguardando autenticação...");
     }
     
-    toggleModal('connect-modal', true);
-    toggleError('connect', null);
+    let idToken = await appState.currentUser.getIdToken();
+    options.headers = { ...options.headers, 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' };
     
-    if(check) check.checked = false;
-    if(btn) {
-        btn.disabled = true;
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    let response = await fetch(`${API_URL}${endpoint}`, options);
+    
+    if (response.status === 401) {
+        try {
+            idToken = await appState.currentUser.getIdToken(true);
+            options.headers['Authorization'] = `Bearer ${idToken}`;
+            response = await fetch(`${API_URL}${endpoint}`, options);
+        } catch (e) { throw new Error("Sessão expirada."); }
     }
+
+    if (!response.ok) {
+        try {
+            const data = await response.json();
+            throw new Error(data.detail || data.error || `Erro ${response.status}`);
+        } catch (e) { throw new Error(e.message || `Erro ${response.status}`); }
+    }
+    return response.json();
 }
 
-function openDepositModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide sua identidade no Perfil antes de depositar.");
-    const step1 = document.getElementById('deposit-step-1');
-    const step2 = document.getElementById('deposit-step-2');
-    if(step1) step1.classList.remove('hidden');
-    if(step2) step2.classList.add('hidden');
-    toggleModal('deposit-modal', true);
-}
-
-function openWithdrawModal() {
-    if (appState.kycData.kyc_status !== 'verified') return showError("Valide sua identidade no Perfil antes de sacar.");
-    const input = document.getElementById('withdraw-amount');
-    const maxBal = document.getElementById('withdraw-max-balance');
-    const pixKey = document.getElementById('withdraw-pix-key');
-    
-    if(input) input.value = '';
-    if(maxBal) maxBal.textContent = `${appState.wallet.toFixed(0)} GC`;
-    if(pixKey) pixKey.value = appState.kycData.cpf || '';
-    
-    toggleModal('withdraw-modal', true);
-}
-
-// --- FUNÇÕES DE REGISTRO (Definidas aqui antes de setupRegistrationSteps) ---
-function goToRegisterStep(step) {
-    document.querySelectorAll('.register-step').forEach(s => s.classList.add('hidden'));
-    const stepEl = document.getElementById(`register-step-${step}`);
-    if (stepEl) stepEl.classList.remove('hidden');
-    [1, 2, 3].forEach(i => {
-        const el = document.getElementById(`step-ind-${i}`);
-        if (el) {
-            if (i === step) el.className = 'text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors';
-            else el.className = 'text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors';
-        }
-    });
-}
-
-// --- HANDLERS ---
 async function handleLogin(e) {
     e.preventDefault();
     toggleLoading('login', true);
@@ -519,6 +397,198 @@ async function handleLogout() {
     location.reload(); 
 }
 
+// --- MODAIS DE AÇÃO ---
+function openDepositModal() {
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide sua identidade no Perfil antes de depositar.");
+    const step1 = document.getElementById('deposit-step-1');
+    const step2 = document.getElementById('deposit-step-2');
+    if(step1) step1.classList.remove('hidden');
+    if(step2) step2.classList.add('hidden');
+    toggleModal('deposit-modal', true);
+}
+
+function openWithdrawModal() {
+    if (appState.kycData.kyc_status !== 'verified') return showError("Valide sua identidade no Perfil antes de sacar.");
+    const input = document.getElementById('withdraw-amount');
+    const maxBal = document.getElementById('withdraw-max-balance');
+    const pixKey = document.getElementById('withdraw-pix-key');
+    
+    if(input) input.value = '';
+    if(maxBal) maxBal.textContent = `${appState.wallet.toFixed(0)} GC`;
+    if(pixKey) pixKey.value = appState.kycData.cpf || '';
+    
+    toggleModal('withdraw-modal', true);
+}
+
+function openConnectModal(gameType) {
+    appState.currentGame = gameType;
+    const title = document.getElementById('connect-modal-title');
+    const input = document.getElementById('riot-id-input');
+    const check = document.getElementById('connect-terms-check');
+    const btn = document.getElementById('connect-modal-submit');
+    
+    if(title) title.textContent = `CONECTAR ${gameType === 'lol' ? 'LoL' : ''}`;
+    if(input) {
+        const acc = appState.connectedAccounts[gameType];
+        input.value = acc?.playerId || '';
+    }
+    
+    toggleModal('connect-modal', true);
+    toggleError('connect', null);
+    
+    if(check) check.checked = false;
+    if(btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// --- AÇÕES DE JOGO E APOSTA ---
+async function selectGame(gameType) {
+    if (!appState.currentUser) return showError("Faça login primeiro.");
+    appState.currentGame = gameType;
+    toggleShells('app');
+    navigateApp('challenges-page');
+    
+    const list = document.getElementById('challenges-list');
+    if(list) {
+        list.innerHTML = '<div class="loader mx-auto"></div>';
+        document.getElementById('challenges-subtitle').textContent = "Analisando seu perfil...";
+    }
+
+    try {
+        const challenges = await fetchWithAuth('/api/get-challenges', { method: 'POST', body: JSON.stringify({ gameType }) });
+        renderChallenges(challenges);
+    } catch (e) {
+        if(list) {
+            list.innerHTML = `<p class="text-center text-red-400 p-4 border border-red-500/20 rounded bg-red-500/10">${e.message}</p>`;
+            if(e.message.includes("Não conectado")) {
+                 list.innerHTML += `<div class="text-center mt-4"><button class="connect-btn glass-card px-4 py-2 font-bold border hover:bg-white/10" onclick="navigateApp('profile-page')">IR PARA PERFIL</button></div>`;
+            }
+        }
+    }
+}
+
+function renderChallenges(challenges) {
+    const list = document.getElementById('challenges-list');
+    if(!list) return;
+    list.innerHTML = '';
+    document.getElementById('request-bet-card').classList.remove('hidden');
+    
+    challenges.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'glass-card p-4 flex justify-between items-center hover:border-[var(--primary-purple)] transition-all cursor-pointer group border border-white/5 bg-white/5';
+        const isSelected = appState.betSlip.some(b => b.id === c.id);
+        if (isSelected) el.classList.add('border-[var(--primary-purple)]', 'bg-[var(--primary-purple)]/10');
+        el.innerHTML = `
+            <div>
+                <h4 class="font-bold group-hover:text-[var(--primary-purple)] transition-colors text-white">${c.title}</h4>
+                <p class="text-xs text-[var(--text-secondary)] uppercase tracking-wider">Multiplicador</p>
+            </div>
+            <div class="text-right">
+                <span class="text-2xl font-bold font-[var(--font-display)] ${isSelected ? 'text-[var(--primary-purple)]' : 'text-white'}">${c.odd.toFixed(2)}x</span>
+            </div>
+        `;
+        el.addEventListener('click', () => {
+            toggleBetSlipItem(c);
+            renderChallenges(challenges);
+        });
+        list.appendChild(el);
+    });
+}
+
+function toggleBetSlipItem(challenge) {
+    const idx = appState.betSlip.findIndex(b => b.id === challenge.id);
+    if (idx >= 0) {
+        appState.betSlip.splice(idx, 1);
+    } else {
+        const conflict = appState.betSlip.find(b => b.conflictKey === challenge.conflictKey);
+        if (conflict) {
+            showMessage("Conflito com aposta existente!", 'error');
+            return;
+        }
+        appState.betSlip.push(challenge);
+        showMessage("Adicionado ao boletim!", 'success');
+    }
+    updateBetSlipCount();
+}
+
+function updateBetSlipCount() {
+    const count = appState.betSlip.length;
+    const el = document.getElementById('bet-slip-count');
+    if (el) {
+        el.textContent = count;
+        el.classList.toggle('hidden', count === 0);
+    }
+    const fab = document.getElementById('bet-slip-fab');
+    if (fab && appState.currentUser) fab.classList.toggle('hidden', count === 0);
+}
+
+function openBetSlipModal() {
+    renderBetSlip();
+    updateBetSlipSummary();
+    toggleModal('bet-slip-modal', true);
+}
+
+function renderBetSlip() {
+    const list = document.getElementById('bet-slip-list');
+    if(!list) return;
+    list.innerHTML = '';
+    if (appState.betSlip.length === 0) {
+        list.innerHTML = '<p class="text-center text-[var(--text-secondary)] text-sm mt-4 italic">Nenhum desafio selecionado.</p>';
+        return;
+    }
+    appState.betSlip.forEach((bet, index) => {
+        const item = document.createElement('div');
+        item.className = 'glass-card p-3 mb-2 flex justify-between items-center bg-white/5 border border-white/10';
+        item.innerHTML = `
+            <div>
+                <p class="font-bold text-sm text-white">${bet.title}</p>
+                <p class="text-xs text-[var(--text-secondary)]">${bet.gameType === 'lol' ? 'League of Legends' : bet.gameType}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-[var(--primary-purple)] font-bold">${bet.odd.toFixed(2)}x</span>
+                <button class="text-red-400 font-bold hover:text-red-500 p-1 rounded hover:bg-red-500/10 transition-colors" data-index="${index}">×</button>
+            </div>
+        `;
+        item.querySelector('button').addEventListener('click', () => removeBetSlipItem(index));
+        list.appendChild(item);
+    });
+}
+
+function removeBetSlipItem(index) {
+    appState.betSlip.splice(index, 1);
+    updateBetSlipCount();
+    renderBetSlip();
+    updateBetSlipSummary();
+}
+
+function updateBetSlipSummary() {
+    const totalOdd = appState.betSlip.reduce((acc, bet) => acc * bet.odd, 1);
+    const amount = parseFloat(document.getElementById('bet-amount-input').value) || 0;
+    
+    document.getElementById('bet-slip-total-odd').textContent = `${totalOdd.toFixed(2)}x`;
+    
+    const potWin = amount * totalOdd;
+    const potEl = document.getElementById('bet-potential-winnings');
+    if(potEl) potEl.innerHTML = `<svg class="w-5 h-5 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> ${potWin.toFixed(2)}`;
+
+    const limitInfo = document.getElementById('bet-slip-limit-info');
+    const placeBtn = document.getElementById('place-bet-btn');
+    
+    if (amount > appState.currentBetLimit) {
+        limitInfo.textContent = `Limite atual: ${appState.currentBetLimit.toFixed(0)} GC`;
+        limitInfo.classList.remove('hidden');
+        placeBtn.disabled = true;
+        placeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        limitInfo.classList.add('hidden');
+        placeBtn.disabled = false;
+        placeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// --- FINANCEIRO E CONEXÃO ---
 async function handleSubmitConnection() {
     const id = document.getElementById('riot-id-input').value;
     if (!id) return toggleError('connect', "Insira um ID.");
@@ -539,7 +609,6 @@ async function handleSubmitConnection() {
 
 async function handleDisconnect(gameType) {
     if(!confirm("Deseja desconectar esta conta?")) return;
-    
     toggleLoading('connect', true); 
     fetchWithAuth('/api/disconnect', { method: 'POST', body: JSON.stringify({ gameType }) })
     .then(() => {
@@ -594,11 +663,6 @@ async function handleGeneratePix() {
 async function handleRequestWithdraw() {
     const valGc = parseFloat(document.getElementById('withdraw-amount').value);
     const minBrl = 50;
-    const minGc = minBrl * EXCHANGE_RATE;
-    
-    if (valGc < minGc) return toggleError('withdraw', `Mínimo ${minGc} GC (R$ ${minBrl}).`);
-    if (valGc > appState.wallet) return toggleError('withdraw', "Saldo insuficiente.");
-    
     const valBrl = valGc / EXCHANGE_RATE;
     if(!confirm(`Sacar ${valGc} GC? Você receberá aproximadamente R$ ${valBrl.toFixed(2)}.`)) return;
 
@@ -654,13 +718,11 @@ async function handlePlaceBet() {
         appState.wallet = res.newWallet * EXCHANGE_RATE;
         appState.bonus_wallet = res.newBonusWallet * EXCHANGE_RATE;
         updateUI();
-        
         appState.betSlip = [];
         updateBetSlipCount();
         toggleModal('bet-slip-modal', false);
         showMessage("Aposta Confirmada! Boa sorte.", 'success');
         navigateApp('bets-page');
-        
     } catch (e) {
         document.getElementById('bet-slip-error-msg').textContent = e.message;
         document.getElementById('bet-slip-error-msg').classList.remove('hidden');
@@ -694,7 +756,7 @@ async function handleRequestBet() {
     } catch (e) { toggleError('request', e.message); } finally { toggleLoading('request', false); }
 }
 
-// HANDLERS EXTRA
+// Placeholder Functions
 function handleAddCustomBetToSlip() {}
 function resetRequestModal() {
     const resCont = document.getElementById('request-result-container');
@@ -717,17 +779,73 @@ function openRequestBetModal() {
     document.getElementById('request-target-input').value = '';
     toggleModal('request-bet-modal', true);
 }
+async function fetchAndRenderActiveBets() {
+    const list = document.getElementById('active-bets-list');
+    if(!list) return;
+    list.innerHTML = '<div class="loader mx-auto"></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-active-bets');
+        if (bets.length === 0) {
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Nenhuma missão ativa no momento.</p>';
+            return;
+        }
+        list.innerHTML = bets.map(b => `
+            <div class="glass-card p-4 border-l-4 border-yellow-500 bg-white/5">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs text-yellow-500 font-bold uppercase tracking-wider">Em Andamento</span>
+                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <div class="mb-3 space-y-1">
+                    ${b.betItems.map(i => `<p class="font-bold text-sm text-white">• ${i.title} <span class="text-[var(--primary-purple)]">(${i.odd}x)</span></p>`).join('')}
+                </div>
+                <div class="flex justify-between items-end border-t border-white/10 pt-2">
+                    <div><p class="text-xs text-[var(--text-secondary)] uppercase">Valor</p><p class="font-bold text-white">${(b.betAmount * EXCHANGE_RATE).toFixed(0)} GC</p></div>
+                    <div class="text-right"><p class="text-xs text-[var(--text-secondary)] uppercase">Loot</p><p class="font-bold text-[var(--accent-cyan)] font-[Orbitron]">${(b.potentialWinnings * EXCHANGE_RATE).toFixed(0)} GC</p></div>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
+}
 
+async function fetchAndRenderHistoryBets() {
+    const list = document.getElementById('history-bets-list');
+    if(!list) return;
+    list.innerHTML = '<div class="loader mx-auto"></div>';
+    try {
+        const bets = await fetchWithAuth('/api/get-history-bets');
+        if (bets.length === 0) {
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Histórico vazio.</p>';
+            return;
+        }
+        list.innerHTML = bets.map(b => {
+            const borderColor = b.status === 'won' ? 'border-green-500' : (b.status === 'void' ? 'border-gray-500' : 'border-red-500');
+            const textColor = b.status === 'won' ? 'text-green-500' : (b.status === 'void' ? 'text-gray-500' : 'text-red-500');
+            const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
+            const winAmountGC = (b.status === 'won' ? (b.potentialWinnings - b.betAmount) : b.betAmount) * EXCHANGE_RATE;
+            return `
+            <div class="glass-card p-4 border-l-4 ${borderColor} bg-white/5 hover:bg-white/10 transition-colors">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs ${textColor} font-bold uppercase tracking-wider">${statusTxt}</span>
+                    <span class="text-xs text-[var(--text-secondary)]">${new Date(b.resolvedAt || b.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div class="mb-2">${b.betItems.map(i => `<p class="text-sm text-white">• ${i.title}</p>`).join('')}</div>
+                 <div class="flex justify-between font-bold items-center">
+                    <span class="${textColor} font-[Orbitron] text-lg">${b.status === 'won' ? '+' : '-'} ${winAmountGC.toFixed(0)} GC</span>
+                    <span class="text-xs text-[var(--text-secondary)] px-2 py-1 bg-black/30 rounded border border-white/10">${b.totalOdd}x</span>
+                </div>
+            </div>
+        `}).join('');
+    } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
+}
 
 // ==================================================
-// 7. SETUP DE EVENTOS (TODAS AS FUNÇÕES JÁ FORAM DEFINIDAS)
+// 5. SETUP DE EVENTOS (AGORA SEGURO)
 // ==================================================
 
 function setupRegistrationSteps() {
     const next1 = document.getElementById('reg-next-step-1');
     const next2 = document.getElementById('reg-next-step-2');
     const check = document.getElementById('reg-terms');
-
     if(next1) next1.addEventListener('click', () => {
         const p1 = document.getElementById('reg-password').value;
         const p2 = document.getElementById('reg-confirm-password').value;
@@ -735,13 +853,11 @@ function setupRegistrationSteps() {
         showRegisterError(null); 
         goToRegisterStep(2);
     });
-
     if(next2) next2.addEventListener('click', () => {
         if (!document.getElementById('reg-fullname').value || !document.getElementById('reg-cpf').value || !document.getElementById('reg-birthdate').value) return showRegisterError("Preencha tudo.");
         showRegisterError(null); 
         goToRegisterStep(3);
     });
-
     if(check) check.addEventListener('change', () => {
         const submit = document.getElementById('reg-submit');
         if(submit) {
@@ -752,11 +868,22 @@ function setupRegistrationSteps() {
     });
 }
 
+function goToRegisterStep(step) {
+    document.querySelectorAll('.register-step').forEach(s => s.classList.add('hidden'));
+    const stepEl = document.getElementById(`register-step-${step}`);
+    if (stepEl) stepEl.classList.remove('hidden');
+    [1, 2, 3].forEach(i => {
+        const el = document.getElementById(`step-ind-${i}`);
+        if (el) {
+            if (i === step) el.className = 'text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors';
+            else el.className = 'text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors';
+        }
+    });
+}
+
 function setupAuthListeners() {
-    const ids = ['auth-login-btn', 'register-goto-login', 'auth-register-btn', 'landing-cta-btn', 'login-goto-register'];
-    ids.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.addEventListener('click', () => navigateAuth(id.includes('login') ? 'login-page' : 'register-page'));
+    document.querySelectorAll('#auth-login-btn, #register-goto-login, #auth-register-btn, #landing-cta-btn, #login-goto-register').forEach(btn => {
+        if(btn) btn.addEventListener('click', () => navigateAuth(btn.id.includes('login') ? 'login-page' : 'register-page'));
     });
 
     const loginForm = document.getElementById('login-form');
@@ -784,13 +911,12 @@ function setupAppListeners() {
     const logoutBtn = document.getElementById('logout-btn');
     if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     
-    // Menu Mobile
-    document.querySelector('.bottom-nav').addEventListener('click', (e) => {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if(bottomNav) bottomNav.addEventListener('click', (e) => {
         const btn = e.target.closest('button.nav-item');
         if (btn) navigateApp(btn.dataset.page);
     });
 
-    // Menu Desktop
     const desktopNav = document.getElementById('desktop-nav');
     if (desktopNav) {
         desktopNav.addEventListener('click', (e) => {
@@ -805,75 +931,56 @@ function setupAppListeners() {
     const backBtn = document.getElementById('back-to-home');
     if(backBtn) backBtn.addEventListener('click', () => navigateApp('home-page'));
     
-    // Connect
     document.querySelectorAll('.connect-btn').forEach(btn => btn.addEventListener('click', (e) => openConnectModal(e.target.dataset.game)));
+    
     const connCancel = document.getElementById('connect-modal-cancel');
     if(connCancel) connCancel.addEventListener('click', () => toggleModal('connect-modal', false));
     const connSubmit = document.getElementById('connect-modal-submit');
     if(connSubmit) connSubmit.addEventListener('click', handleSubmitConnection);
     const connCheck = document.getElementById('connect-terms-check');
-    if(connCheck) {
-        connCheck.addEventListener('change', (e) => {
-            if(connSubmit) {
-                connSubmit.disabled = !e.target.checked;
-                connSubmit.classList.toggle('opacity-50', !e.target.checked);
-                connSubmit.style.cursor = e.target.checked ? 'pointer' : 'not-allowed';
-            }
-        });
-    }
+    if(connCheck) connCheck.addEventListener('change', (e) => {
+        if(connSubmit) {
+            connSubmit.disabled = !e.target.checked;
+            connSubmit.classList.toggle('opacity-50', !e.target.checked);
+            connSubmit.style.cursor = e.target.checked ? 'pointer' : 'not-allowed';
+        }
+    });
 
-    // Bets
     const fab = document.getElementById('bet-slip-fab');
     if(fab) fab.addEventListener('click', openBetSlipModal);
-    
     const slipClose = document.getElementById('bet-slip-modal-close');
     if(slipClose) slipClose.addEventListener('click', () => toggleModal('bet-slip-modal', false));
-    
     const amountInput = document.getElementById('bet-amount-input');
     if(amountInput) amountInput.addEventListener('input', updateBetSlipSummary);
-    
     const placeBtn = document.getElementById('place-bet-btn');
     if(placeBtn) placeBtn.addEventListener('click', handlePlaceBet);
 
-    // Request Bet
     const openReqBtn = document.getElementById('open-request-bet-modal');
     if(openReqBtn) openReqBtn.addEventListener('click', openRequestBetModal);
-    
     const reqCancel = document.getElementById('request-modal-cancel');
     if(reqCancel) reqCancel.addEventListener('click', () => toggleModal('request-bet-modal', false));
-    
     const reqSubmit = document.getElementById('request-modal-submit');
     if(reqSubmit) reqSubmit.addEventListener('click', handleRequestBet);
-    
     const addCustomBtn = document.getElementById('request-add-to-slip');
     if(addCustomBtn) addCustomBtn.addEventListener('click', handleAddCustomBetToSlip); 
-    
     const tryAgainBtn = document.getElementById('request-try-again');
     if(tryAgainBtn) tryAgainBtn.addEventListener('click', resetRequestModal);
 
-    // KYC
     const kycForm = document.getElementById('kyc-form');
     if(kycForm) kycForm.addEventListener('submit', handleKycSubmit);
-    
     const kycCancel = document.getElementById('kyc-modal-cancel');
     if(kycCancel) kycCancel.addEventListener('click', () => toggleModal('kyc-modal', false));
 
-    // Deposit
     const openDep = document.getElementById('open-deposit-modal');
     if(openDep) openDep.addEventListener('click', openDepositModal);
-    
     const depCancel = document.getElementById('deposit-modal-cancel');
     if(depCancel) depCancel.addEventListener('click', () => toggleModal('deposit-modal', false));
-    
     const depConfirm = document.getElementById('deposit-confirm-btn');
     if(depConfirm) depConfirm.addEventListener('click', handleGeneratePix);
-    
     const depCopy = document.getElementById('deposit-copy-btn');
     if(depCopy) depCopy.addEventListener('click', copyPixCode);
-    
     const depFinish = document.getElementById('deposit-finish-btn');
     if(depFinish) depFinish.addEventListener('click', () => toggleModal('deposit-modal', false));
-    
     document.querySelectorAll('.deposit-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const input = document.getElementById('deposit-amount');
@@ -881,20 +988,15 @@ function setupAppListeners() {
         });
     });
 
-    // Withdraw
     const openWith = document.getElementById('open-withdraw-modal');
     if(openWith) openWith.addEventListener('click', openWithdrawModal);
-    
     const withCancel = document.getElementById('withdraw-modal-cancel');
     if(withCancel) withCancel.addEventListener('click', () => toggleModal('withdraw-modal', false));
-    
     const withConfirm = document.getElementById('withdraw-confirm-btn');
     if(withConfirm) withConfirm.addEventListener('click', handleRequestWithdraw);
 
-    // Coupon
     const redeemBtn = document.getElementById('redeem-coupon-btn');
     if(redeemBtn) redeemBtn.addEventListener('click', handleRedeemCoupon);
-    
     const refEl = document.getElementById('my-referral-code');
     if(refEl) refEl.addEventListener('click', () => {
         if(appState.myReferralCode) {
@@ -903,12 +1005,11 @@ function setupAppListeners() {
         }
     });
 
-    // Convert
     const convBtn = document.getElementById('convert-bonus-btn');
     if(convBtn) convBtn.addEventListener('click', handleConvertBonus);
 }
 
-// --- TEMA & INIT ---
+// --- TEMA & INIT FINAL ---
 function initTheme() {
     const saved = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
@@ -918,7 +1019,6 @@ function initTheme() {
     if(btn) {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
-        
         newBtn.addEventListener('click', () => {
             const current = document.documentElement.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
@@ -945,7 +1045,6 @@ function updateThemeIcons(theme) {
 function initializeMainApp() {
     onAuthStateChanged(auth, async (user) => {
         if (appState.isRegistering) return;
-        
         if (user) {
             appState.currentUser = user;
             try {
@@ -969,7 +1068,6 @@ function initializeMainApp() {
                     currentBetLimit: serverLimit * EXCHANGE_RATE, 
                     myReferralCode: data.my_referral_code || ''
                 });
-                
                 updateUI();
                 toggleShells('app');
                 navigateApp('home-page');
@@ -990,13 +1088,9 @@ function initializeMainApp() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> App v8.0 (Bulletproof Init) Iniciando...");
-    // Ordem Correta:
-    // 1. Inicializa Tema (Visual)
+    console.log(">>> App v9.0 (Final Stable) Iniciando...");
     initTheme();
-    // 2. Configura Listeners (Funções já existem)
     setupAuthListeners();
     setupAppListeners();
-    // 3. Inicia Lógica Principal (Firebase)
     initializeMainApp();
 });
