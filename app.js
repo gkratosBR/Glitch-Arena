@@ -69,25 +69,48 @@ async function fetchWithAuth(endpoint, options = {}) {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(">>> App v4.2 (UI/UX Fixes) Iniciando...");
+    console.log(">>> App v5.0 (Cyberpunk Core) Iniciando...");
     initTheme();
     initializeMainApp();
     setupAuthListeners();
     setupAppListeners();
 });
 
+// --- LÓGICA DE TEMA (ATUALIZADA) ---
 function initTheme() {
     const saved = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcons(saved);
     
     const btn = document.getElementById('theme-toggle');
     if(btn) {
-        btn.addEventListener('click', () => {
+        // Clone para remover listeners antigos e garantir limpeza
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
             const current = document.documentElement.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
+            
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
+            updateThemeIcons(next);
         });
+    }
+}
+
+function updateThemeIcons(theme) {
+    const sunIcon = document.querySelector('.icon-sun');
+    const moonIcon = document.querySelector('.icon-moon');
+    
+    if (!sunIcon || !moonIcon) return;
+
+    if (theme === 'light') {
+        moonIcon.classList.add('hidden');
+        sunIcon.classList.remove('hidden');
+    } else {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
     }
 }
 
@@ -184,6 +207,14 @@ function navigateApp(pageId) {
     appState.currentAppPage = pageId;
     document.querySelectorAll('.nav-item').forEach(i => {
         i.classList.toggle('active', i.dataset.page === pageId);
+        // Visual feedback for active tab (using text color change in new design)
+        if (i.dataset.page === pageId) {
+            i.classList.remove('text-[var(--text-secondary)]');
+            i.classList.add('text-[var(--primary-purple)]');
+        } else {
+            i.classList.add('text-[var(--text-secondary)]');
+            i.classList.remove('text-[var(--primary-purple)]');
+        }
     });
     
     if (pageId === 'home-page') appState.currentGame = null;
@@ -238,9 +269,10 @@ function setupAppListeners() {
         const btn = document.getElementById('connect-modal-submit');
         btn.disabled = !e.target.checked;
         btn.classList.toggle('opacity-50', !e.target.checked);
+        btn.style.cursor = e.target.checked ? 'pointer' : 'not-allowed';
     });
 
-    // Bets (FIX: openBetSlipModal agora existe)
+    // Bets
     document.getElementById('bet-slip-fab').addEventListener('click', openBetSlipModal);
     document.getElementById('bet-slip-modal-close').addEventListener('click', () => toggleModal('bet-slip-modal', false));
     document.getElementById('bet-amount-input').addEventListener('input', updateBetSlipSummary);
@@ -251,7 +283,6 @@ function setupAppListeners() {
     document.getElementById('request-modal-cancel').addEventListener('click', () => toggleModal('request-bet-modal', false));
     document.getElementById('request-modal-submit').addEventListener('click', handleRequestBet);
     
-    // FIX: Listener correto para adicionar custom bet
     const addCustomBtn = document.getElementById('request-add-to-slip');
     if(addCustomBtn) {
          addCustomBtn.addEventListener('click', handleAddCustomBetToSlip);
@@ -292,7 +323,7 @@ function setupAppListeners() {
     document.getElementById('convert-bonus-btn').addEventListener('click', handleConvertBonus);
 }
 
-// --- BET SLIP LOGIC (QUE ESTAVA FALTANDO/INCOMPLETA) ---
+// --- BET SLIP LOGIC ---
 
 function openBetSlipModal() {
     renderBetSlip();
@@ -305,13 +336,13 @@ function renderBetSlip() {
     list.innerHTML = '';
 
     if (appState.betSlip.length === 0) {
-        list.innerHTML = '<p class="text-center text-[var(--text-secondary)] text-sm mt-4">Nenhum desafio selecionado.</p>';
+        list.innerHTML = '<p class="text-center text-[var(--text-secondary)] text-sm mt-4 italic">Nenhum desafio selecionado.</p>';
         return;
     }
 
     appState.betSlip.forEach((bet, index) => {
         const item = document.createElement('div');
-        item.className = 'glass-card p-3 mb-2 flex justify-between items-center';
+        item.className = 'glass-card p-3 mb-2 flex justify-between items-center bg-white/5 border border-white/10';
         item.innerHTML = `
             <div>
                 <p class="font-bold text-sm text-white">${bet.title}</p>
@@ -319,7 +350,7 @@ function renderBetSlip() {
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-[var(--primary-purple)] font-bold">${bet.odd.toFixed(2)}x</span>
-                <button class="text-red-400 font-bold hover:text-red-500" data-index="${index}">×</button>
+                <button class="text-red-400 font-bold hover:text-red-500 p-1 rounded hover:bg-red-500/10 transition-colors" data-index="${index}">×</button>
             </div>
         `;
         item.querySelector('button').addEventListener('click', () => removeBetSlipItem(index));
@@ -341,7 +372,6 @@ function updateBetSlipCount() {
         el.textContent = count;
         el.classList.toggle('hidden', count === 0);
     }
-    // Mostra/Esconde botão flutuante se estiver logado
     const fab = document.getElementById('bet-slip-fab');
     if (fab && appState.currentUser) {
         fab.classList.toggle('hidden', count === 0);
@@ -355,17 +385,18 @@ function updateBetSlipSummary() {
     document.getElementById('bet-slip-total-odd').textContent = `${totalOdd.toFixed(2)}x`;
     document.getElementById('bet-potential-winnings').textContent = `GC ${(amount * totalOdd).toFixed(2)}`;
 
-    // Validação de Limite
     const limitInfo = document.getElementById('bet-slip-limit-info');
+    const placeBtn = document.getElementById('place-bet-btn');
+    
     if (amount > appState.currentBetLimit) {
         limitInfo.textContent = `Limite atual: GC ${appState.currentBetLimit.toFixed(2)}`;
         limitInfo.classList.remove('hidden');
-        document.getElementById('place-bet-btn').disabled = true;
-        document.getElementById('place-bet-btn').classList.add('opacity-50');
+        placeBtn.disabled = true;
+        placeBtn.classList.add('opacity-50', 'cursor-not-allowed');
     } else {
         limitInfo.classList.add('hidden');
-        document.getElementById('place-bet-btn').disabled = false;
-        document.getElementById('place-bet-btn').classList.remove('opacity-50');
+        placeBtn.disabled = false;
+        placeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
 }
 
@@ -374,7 +405,6 @@ function toggleBetSlipItem(challenge) {
     if (idx >= 0) {
         appState.betSlip.splice(idx, 1);
     } else {
-        // Verifica conflitos (ex: não pode apostar em Over kills e Under kills ao mesmo tempo se conflitarem)
         const conflict = appState.betSlip.find(b => b.conflictKey === challenge.conflictKey);
         if (conflict) {
             showMessage("Conflito com aposta existente!", 'error');
@@ -411,7 +441,7 @@ async function handlePlaceBet() {
         updateBetSlipCount();
         toggleModal('bet-slip-modal', false);
         showMessage("Aposta Confirmada! Boa sorte.", 'success');
-        navigateApp('bets-page'); // Vai para aba de apostas ativas
+        navigateApp('bets-page');
         
     } catch (e) {
         document.getElementById('bet-slip-error-msg').textContent = e.message;
@@ -441,9 +471,7 @@ async function selectGame(gameType) {
     } catch (e) {
         list.innerHTML = `<p class="text-center text-red-400 p-4 border border-red-500/20 rounded bg-red-500/10">${e.message}</p>`;
         if(e.message.includes("Não conectado")) {
-            // Se erro for falta de conexão, mostra botão
-             list.innerHTML += `<div class="text-center mt-4"><button class="connect-btn glass-card px-4 py-2 font-bold" data-game="${gameType}">CONECTAR AGORA</button></div>`;
-             // Re-attach listener pq o HTML foi injetado dinamicamente
+             list.innerHTML += `<div class="text-center mt-4"><button class="connect-btn glass-card px-4 py-2 font-bold border hover:bg-white/10" data-game="${gameType}">CONECTAR AGORA</button></div>`;
              list.querySelector('.connect-btn').addEventListener('click', () => openConnectModal(gameType));
         }
     }
@@ -453,20 +481,19 @@ function renderChallenges(challenges) {
     const list = document.getElementById('challenges-list');
     list.innerHTML = '';
     
-    // Mostra opção de custom bet
     document.getElementById('request-bet-card').classList.remove('hidden');
 
     challenges.forEach(c => {
         const el = document.createElement('div');
-        el.className = 'glass-card p-4 flex justify-between items-center hover:border-[var(--primary-purple)] transition cursor-pointer group';
+        el.className = 'glass-card p-4 flex justify-between items-center hover:border-[var(--primary-purple)] transition-all cursor-pointer group border border-white/5 bg-white/5';
         const isSelected = appState.betSlip.some(b => b.id === c.id);
         
-        if (isSelected) el.classList.add('border-[var(--primary-purple)]', 'bg-[var(--bg-input)]');
+        if (isSelected) el.classList.add('border-[var(--primary-purple)]', 'bg-[var(--primary-purple)]/10');
         
         el.innerHTML = `
             <div>
-                <h4 class="font-bold group-hover:text-[var(--primary-purple)] transition">${c.title}</h4>
-                <p class="text-xs text-[var(--text-secondary)]">Multiplicador</p>
+                <h4 class="font-bold group-hover:text-[var(--primary-purple)] transition-colors text-white">${c.title}</h4>
+                <p class="text-xs text-[var(--text-secondary)] uppercase tracking-wider">Multiplicador</p>
             </div>
             <div class="text-right">
                 <span class="text-2xl font-bold font-[var(--font-display)] ${isSelected ? 'text-[var(--primary-purple)]' : 'text-white'}">${c.odd.toFixed(2)}x</span>
@@ -474,7 +501,7 @@ function renderChallenges(challenges) {
         `;
         el.addEventListener('click', () => {
             toggleBetSlipItem(c);
-            renderChallenges(challenges); // Re-render para atualizar estado visual
+            renderChallenges(challenges);
         });
         list.appendChild(el);
     });
@@ -486,26 +513,26 @@ async function fetchAndRenderActiveBets() {
     try {
         const bets = await fetchWithAuth('/api/get-active-bets');
         if (bets.length === 0) {
-            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center">Nenhuma aposta ativa.</p>';
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Nenhuma aposta ativa no momento.</p>';
             return;
         }
         list.innerHTML = bets.map(b => `
-            <div class="glass-card p-4 border-l-4 border-yellow-500">
+            <div class="glass-card p-4 border-l-4 border-yellow-500 bg-white/5">
                 <div class="flex justify-between mb-2">
-                    <span class="text-xs text-yellow-500 font-bold uppercase">Em Andamento</span>
+                    <span class="text-xs text-yellow-500 font-bold uppercase tracking-wider">Em Andamento</span>
                     <span class="text-xs text-[var(--text-secondary)]">${new Date(b.createdAt).toLocaleTimeString()}</span>
                 </div>
-                <div class="mb-3">
-                    ${b.betItems.map(i => `<p class="font-bold text-sm">• ${i.title} (${i.odd}x)</p>`).join('')}
+                <div class="mb-3 space-y-1">
+                    ${b.betItems.map(i => `<p class="font-bold text-sm text-white">• ${i.title} <span class="text-[var(--primary-purple)]">(${i.odd}x)</span></p>`).join('')}
                 </div>
-                <div class="flex justify-between items-end border-t border-[var(--border-color)] pt-2">
+                <div class="flex justify-between items-end border-t border-white/10 pt-2">
                     <div>
-                        <p class="text-xs text-[var(--text-secondary)]">Apostado</p>
-                        <p class="font-bold">GC ${b.betAmount.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--text-secondary)] uppercase">Apostado</p>
+                        <p class="font-bold text-white">GC ${b.betAmount.toFixed(2)}</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs text-[var(--text-secondary)]">Retorno</p>
-                        <p class="font-bold text-[var(--accent-cyan)]">GC ${b.potentialWinnings.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--text-secondary)] uppercase">Retorno</p>
+                        <p class="font-bold text-[var(--accent-cyan)] font-[Orbitron]">GC ${b.potentialWinnings.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
@@ -519,31 +546,35 @@ async function fetchAndRenderHistoryBets() {
     try {
         const bets = await fetchWithAuth('/api/get-history-bets');
         if (bets.length === 0) {
-            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center">Histórico vazio.</p>';
+            list.innerHTML = '<p class="text-[var(--text-secondary)] text-center italic">Histórico vazio.</p>';
             return;
         }
         list.innerHTML = bets.map(b => {
             const color = b.status === 'won' ? 'green' : (b.status === 'void' ? 'gray' : 'red');
             const statusTxt = b.status === 'won' ? 'VITÓRIA' : (b.status === 'void' ? 'ANULADA' : 'DERROTA');
+            // Tailwind dynamic colors safe-listing might be needed, or use style
+            const borderColor = b.status === 'won' ? 'border-green-500' : (b.status === 'void' ? 'border-gray-500' : 'border-red-500');
+            const textColor = b.status === 'won' ? 'text-green-500' : (b.status === 'void' ? 'text-gray-500' : 'text-red-500');
+            
             return `
-            <div class="glass-card p-4 border-l-4 border-${color}-500 opacity-80 hover:opacity-100 transition">
+            <div class="glass-card p-4 border-l-4 ${borderColor} bg-white/5 hover:bg-white/10 transition-colors">
                 <div class="flex justify-between mb-2">
-                    <span class="text-xs text-${color}-500 font-bold uppercase">${statusTxt}</span>
+                    <span class="text-xs ${textColor} font-bold uppercase tracking-wider">${statusTxt}</span>
                     <span class="text-xs text-[var(--text-secondary)]">${new Date(b.resolvedAt || b.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div class="mb-2">
-                    ${b.betItems.map(i => `<p class="text-sm">• ${i.title}</p>`).join('')}
+                    ${b.betItems.map(i => `<p class="text-sm text-white">• ${i.title}</p>`).join('')}
                 </div>
-                 <div class="flex justify-between font-bold">
-                    <span>${b.status === 'won' ? '+' : '-'} GC ${b.status === 'won' ? (b.potentialWinnings - b.betAmount).toFixed(2) : b.betAmount.toFixed(2)}</span>
-                    <span class="text-xs text-[var(--text-secondary)] self-center">${b.totalOdd}x</span>
+                 <div class="flex justify-between font-bold items-center">
+                    <span class="${textColor} font-[Orbitron] text-lg">${b.status === 'won' ? '+' : '-'} GC ${b.status === 'won' ? (b.potentialWinnings - b.betAmount).toFixed(2) : b.betAmount.toFixed(2)}</span>
+                    <span class="text-xs text-[var(--text-secondary)] px-2 py-1 bg-black/30 rounded border border-white/10">${b.totalOdd}x</span>
                 </div>
             </div>
         `}).join('');
     } catch (e) { list.innerHTML = `<p class="text-red-400 text-center">${e.message}</p>`; }
 }
 
-// --- UI HELPERS & BOILERPLATE ---
+// --- UI HELPERS ---
 function openConnectModal(gameType) {
     appState.currentGame = gameType;
     document.getElementById('connect-modal-title').textContent = `CONECTAR ${gameType === 'lol' ? 'LoL' : ''}`;
@@ -556,6 +587,7 @@ function openConnectModal(gameType) {
     const btn = document.getElementById('connect-modal-submit');
     btn.disabled = true;
     btn.classList.add('opacity-50');
+    btn.style.cursor = 'not-allowed';
 }
 
 async function handleSubmitConnection() {
@@ -694,7 +726,7 @@ async function handleRequestBet() {
         document.getElementById('request-result-odd').textContent = c.odd.toFixed(2) + 'x';
         
         const addBtn = document.getElementById('request-add-to-slip');
-        // Usar uma nova função em vez de substituir onclick para evitar problemas de escopo/closure
+        // Nova função para evitar closure issues
         addBtn.onclick = function() {
             toggleBetSlipItem(c);
             toggleModal('request-bet-modal', false);
@@ -706,7 +738,7 @@ async function handleRequestBet() {
 }
 
 function handleAddCustomBetToSlip() {
-    // A lógica real está no onclick atribuído dinamicamente acima
+    // Lógica tratada no onclick dinâmico acima
 }
 
 function resetRequestModal() {
@@ -740,6 +772,7 @@ function setupRegistrationSteps() {
     if(check) check.addEventListener('change', () => {
         submit.disabled = !check.checked;
         submit.classList.toggle('opacity-50', !check.checked);
+        submit.style.cursor = check.checked ? 'pointer' : 'not-allowed';
     });
 }
 
@@ -751,7 +784,12 @@ function goToRegisterStep(step) {
     [1, 2, 3].forEach(i => {
         const el = document.getElementById(`step-ind-${i}`);
         if (el) {
-            el.className = i === step ? 'text-[var(--primary-purple)] font-bold text-xs' : 'text-[var(--text-secondary)] text-xs';
+            // Atualiza estilo dos indicadores de passo
+            if (i === step) {
+                el.className = 'text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors';
+            } else {
+                el.className = 'text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors';
+            }
         }
     });
 }
@@ -845,9 +883,19 @@ function showMessage(msg, type) {
     const m = document.getElementById('message-modal');
     const c = document.getElementById('message-modal-content');
     c.textContent = msg;
-    c.className = `px-6 py-3 rounded-full shadow-2xl font-bold text-sm border border-[var(--border-color)] ${type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`;
+    
+    // Estilos atualizados para o Toast
+    const bgClass = type === 'success' ? 'bg-green-600/90' : 'bg-red-600/90';
+    c.className = `inline-block px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-bold text-sm border border-white/10 backdrop-blur-xl transform transition-all duration-300 text-white ${bgClass}`;
+    
     m.classList.remove('hidden');
-    setTimeout(() => m.classList.add('hidden'), 3000);
+    // Animação de entrada
+    setTimeout(() => { c.classList.remove('scale-95', 'opacity-0'); }, 10);
+    
+    setTimeout(() => {
+        c.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => m.classList.add('hidden'), 300);
+    }, 3000);
 }
 
 function showError(msg) { showMessage(msg, 'error'); }
@@ -891,19 +939,23 @@ function updateProfileUI() {
     const lolBtn = document.getElementById('lol-connect-btn');
     
     if (appState.connectedAccounts['lol']) {
-        lolStatus.textContent = appState.connectedAccounts['lol'].playerId;
-        lolStatus.className = 'text-green-400 font-bold mt-1';
+        lolStatus.innerHTML = `<span class="w-2 h-2 bg-green-500 rounded-full"></span> ${appState.connectedAccounts['lol'].playerId}`;
+        lolStatus.className = 'text-green-400 font-bold text-lg flex items-center gap-2';
         lolBtn.textContent = 'DESCONECTAR';
-        lolBtn.classList.replace('bg-[var(--primary-blue)]', 'bg-red-600');
-        // Usar clone para limpar listeners antigos
+        lolBtn.classList.replace('border-white/20', 'border-red-500/50');
+        lolBtn.classList.add('text-red-400', 'hover:bg-red-500/10');
+        
         const newBtn = lolBtn.cloneNode(true);
         lolBtn.parentNode.replaceChild(newBtn, lolBtn);
         newBtn.addEventListener('click', () => handleDisconnect('lol'));
     } else {
-        lolStatus.textContent = 'Desconectado';
-        lolStatus.className = 'text-[var(--accent-orange)] font-bold mt-1';
+        lolStatus.innerHTML = `<span class="w-2 h-2 bg-red-500 rounded-full"></span> Desconectado`;
+        lolStatus.className = 'text-[var(--accent-orange)] font-bold text-lg flex items-center gap-2';
         // Reset botão
         lolBtn.textContent = 'CONECTAR';
+        lolBtn.classList.remove('text-red-400', 'hover:bg-red-500/10', 'border-red-500/50');
+        lolBtn.classList.add('border-white/20');
+        
         const newBtn = lolBtn.cloneNode(true);
         lolBtn.parentNode.replaceChild(newBtn, lolBtn);
         newBtn.addEventListener('click', () => openConnectModal('lol'));
@@ -915,22 +967,25 @@ function updateRolloverUI() {
     if (appState.rollover_target > 0) {
         container.classList.remove('hidden');
         document.getElementById('rollover-text').textContent = `GC ${appState.rollover_target.toFixed(2)}`;
-        const percent = Math.min(100, (1 - (appState.rollover_target / (appState.bonus_wallet * 20))) * 100); // Estimativa visual
+        const percent = Math.min(100, (1 - (appState.rollover_target / (appState.bonus_wallet * 20))) * 100); 
         document.getElementById('rollover-bar').style.width = `${percent}%`;
         
         const btn = document.getElementById('convert-bonus-btn');
         btn.disabled = true;
-        btn.classList.add('opacity-50');
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
         btn.textContent = `Falta GC ${appState.rollover_target.toFixed(2)}`;
     } else if (appState.bonus_wallet > 0) {
         container.classList.remove('hidden');
         document.getElementById('rollover-text').textContent = "LIBERADO";
-        document.getElementById('rollover-bar').style.width = "100%";
-        document.getElementById('rollover-bar').style.backgroundColor = "#4ade80"; // green
+        const bar = document.getElementById('rollover-bar');
+        bar.style.width = "100%";
+        bar.classList.remove('bg-gradient-to-r');
+        bar.classList.add('bg-green-500');
         
         const btn = document.getElementById('convert-bonus-btn');
         btn.disabled = false;
-        btn.classList.remove('opacity-50');
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.classList.add('bg-[var(--primary-purple)]', 'hover:brightness-110');
         btn.textContent = "CONVERTER BÔNUS";
     } else {
         container.classList.add('hidden');
@@ -939,13 +994,13 @@ function updateRolloverUI() {
 
 function updateNavbarUI() {
     const userInfo = document.getElementById('nav-user-info');
-    const loginBtn = document.getElementById('auth-login-btn'); // Botão na landing, não navbar
+    const loginBtn = document.getElementById('auth-login-btn'); // Botão na landing
     const logoutBtn = document.getElementById('logout-btn');
     
     if (appState.currentUser) {
         userInfo.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
-        if(loginBtn) loginBtn.classList.add('hidden'); // Esconde na landing
+        if(loginBtn) loginBtn.classList.add('hidden'); // Esconde na landing se existir
         document.getElementById('nav-user-name').textContent = appState.currentUser.email.split('@')[0];
     } else {
         userInfo.classList.add('hidden');
