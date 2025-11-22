@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glitch Arena (Alpha)</title>
+    <title>Glitch Arena | Skill-to-Earn</title>
     
-    <!-- FIX: Favicon vazio para parar erro 404 -->
+    <!-- Favicon -->
     <link rel="icon" href="data:,">
     
-    <!-- Fontes do Novo Tema -->
+    <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     
-    <!-- CSS Atualizado -->
-    <link rel="stylesheet" href="style.css?v=5.1">
-    <!-- Tailwind via CDN (Versão Estável) -->
+    <!-- CSS & Tailwind -->
+    <link rel="stylesheet" href="style.css?v=5.4">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configuração do Tailwind -->
     <script>
         tailwind.config = {
             darkMode: ['class', '[data-theme="dark"]'],
@@ -35,99 +33,79 @@
 </head>
 <body>
 
-    <!-- SVG SPRITES (ÍCONE DA MOEDA) -->
+    <!-- ÍCONES SVG -->
     <svg style="display: none;">
         <symbol id="icon-glitch-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </symbol>
     </svg>
 
-    <!-- BANNER ALPHA -->
-    <div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-yellow-600/90 to-red-600/90 text-white text-[10px] md:text-xs font-bold text-center py-1 z-[100] backdrop-blur-sm shadow-lg">
-        🚧 ALPHA V5.4: Gameplay Focus 🚧
+    <!-- BANNER -->
+    <div class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90 text-white text-[10px] md:text-xs font-bold text-center py-1 z-[100] backdrop-blur-sm shadow-lg">
+        🚀 SEASON 1 ALPHA: Teste suas skills e ganhe recompensas reais!
     </div>
 
     <!-- NAVBAR -->
     <nav class="navbar mt-6 relative">
         <div class="logo glitch-text text-2xl md:text-3xl" data-text="GLITCH ARENA">GLITCH ARENA</div>
         
-        <!-- MENU DESKTOP -->
-        <div id="desktop-nav" class="hidden md:flex absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 gap-8">
-            <button data-page="home-page" class="nav-item-desktop active text-sm font-bold uppercase tracking-widest text-[var(--primary-purple)] hover:text-[var(--accent-cyan)] transition-colors relative group">
-                Início
-                <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-100 transition-transform group-hover:scale-x-100"></span>
-            </button>
-            <button data-page="bets-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">
-                Desafios
-                <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span>
-            </button>
-            <button data-page="history-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">
-                Histórico
-                <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span>
-            </button>
-            <button data-page="profile-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">
-                Perfil
-                <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span>
-            </button>
+        <!-- MENU DESKTOP (Inicia Oculto, JS controla a visibilidade) -->
+        <div id="desktop-nav" class="hidden absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 gap-8">
+            <button data-page="home-page" class="nav-item-desktop active text-sm font-bold uppercase tracking-widest text-[var(--primary-purple)] hover:text-[var(--accent-cyan)] transition-colors relative group">Início<span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-100 transition-transform group-hover:scale-x-100"></span></button>
+            <button data-page="bets-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">Missões<span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span></button>
+            <button data-page="history-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">Histórico<span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span></button>
+            <button data-page="profile-page" class="nav-item-desktop text-sm font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative group">Perfil<span class="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--primary-purple)] transform scale-x-0 transition-transform group-hover:scale-x-100"></span></button>
         </div>
 
         <div class="nav-controls">
             <div class="user-info hidden" id="nav-user-info">
-                <span id="nav-user-name" class="font-bold hidden md:inline font-[Orbitron]">Jogador</span>
-                <!-- SALDO COM ÍCONE -->
-                <span id="nav-user-balance" class="badge flex items-center gap-1">
-                    <svg class="w-4 h-4 text-yellow-300"><use href="#icon-glitch-coin"></use></svg>
-                    0.00
-                </span>
+                <span id="nav-user-name" class="font-bold hidden md:inline font-[Orbitron]">Player</span>
+                <span id="nav-user-balance" class="badge flex items-center gap-1"><svg class="w-4 h-4 text-yellow-300"><use href="#icon-glitch-coin"></use></svg> 0</span>
             </div>
             
             <button id="theme-toggle" class="btn-icon" aria-label="Alternar Tema">
-                <svg class="icon-sun hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg class="icon-sun hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
             </button>
-
             <button id="logout-btn" class="hidden text-red-400 font-bold hover:text-red-300 transition text-sm uppercase tracking-widest" title="Sair">EXIT</button>
         </div>
     </nav>
 
-    <!-- LOADING SPINNER -->
-    <div id="loading-shell" class="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--bg-deep)]">
-        <div class="loader w-12 h-12"></div>
-    </div>
+    <!-- LOADING -->
+    <div id="loading-shell" class="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--bg-deep)]"><div class="loader w-12 h-12"></div></div>
 
     <!-- AUTH SHELL -->
     <div id="auth-shell" class="hidden container mx-auto min-h-[80vh] flex flex-col items-center justify-center px-4 relative z-10">
         
-        <!-- Landing Page -->
+        <!-- Landing Page (GAMIFICADA) -->
         <div id="landing-page" class="page active w-full text-center">
             <div class="max-w-4xl mx-auto mt-10">
-                <h1 class="glitch-text text-5xl md:text-7xl mb-6 leading-tight" data-text="DESAFIE O SISTEMA">DESAFIE O SISTEMA</h1>
-                <!-- Texto atualizado -->
-                <p class="text-[var(--text-secondary)] text-xl md:text-2xl mb-10 max-w-2xl mx-auto font-light">Transforme suas Kills em <span class="text-yellow-400 font-bold inline-flex items-center gap-1"><svg class="w-5 h-5"><use href="#icon-glitch-coin"></use></svg> GlitchCoins</span>. A primeira plataforma de Skill-to-Earn do Brasil.</p>
+                <h1 class="glitch-text text-5xl md:text-7xl mb-6 leading-tight" data-text="PROVE SEU VALOR">PROVE SEU VALOR</h1>
+                <p class="text-[var(--text-secondary)] text-xl md:text-2xl mb-10 max-w-3xl mx-auto font-light">A plataforma definitiva de <span class="text-[var(--accent-cyan)] font-bold">Skill-to-Earn</span>. Jogue Ranked, cumpra contratos e resgate <span class="text-yellow-400 font-bold inline-flex items-center gap-1"><svg class="w-5 h-5"><use href="#icon-glitch-coin"></use></svg> Loot Real</span>.</p>
                 
                 <div class="flex justify-center gap-6 flex-wrap">
-                    <button id="auth-login-btn" class="glass-card px-10 py-4 font-bold hover:bg-white/5 min-w-[180px] text-lg tracking-wider text-[var(--text-primary)]">ENTRAR</button>
-                    <button id="auth-register-btn" class="glass-card px-10 py-4 font-bold bg-gradient-to-r from-[var(--primary-purple)] to-[var(--primary-blue)] text-white border-none min-w-[180px] text-lg tracking-wider shadow-[0_0_20px_rgba(127,65,255,0.5)] hover:shadow-[0_0_30px_rgba(127,65,255,0.8)] transform hover:-translate-y-1 transition-all">CRIAR CONTA</button>
+                    <button id="auth-login-btn" class="glass-card px-10 py-4 font-bold hover:bg-white/5 min-w-[180px] text-lg tracking-wider text-[var(--text-primary)]">LOGIN</button>
+                    <button id="auth-register-btn" class="glass-card px-10 py-4 font-bold bg-gradient-to-r from-[var(--primary-purple)] to-[var(--primary-blue)] text-white border-none min-w-[180px] text-lg tracking-wider shadow-[0_0_20px_rgba(127,65,255,0.5)] hover:shadow-[0_0_30px_rgba(127,65,255,0.8)] transform hover:-translate-y-1 transition-all">JOGAR AGORA</button>
                 </div>
             </div>
 
-            <!-- Grid de Vantagens (ATUALIZADO) -->
+            <!-- Grid de Vantagens (TEXTOS NOVOS) -->
             <div class="stats-grid mt-20 pb-10 max-w-5xl mx-auto">
                 <div class="card group hover:border-[var(--accent-cyan)] transition-colors duration-500">
-                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-cyan)] transition-colors">01</span>
+                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-cyan)] transition-colors">PASSO 01</span>
                     <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Crie seu Cadastro</h3>
-                    <p class="text-sm text-[var(--text-secondary)]">Entre na arena em segundos e prepare-se para o desafio.</p>
+                    <p class="text-sm text-[var(--text-secondary)]">Entre na arena em segundos. Conecte sua conta Riot e prepare-se.</p>
                 </div>
                 <div class="card group hover:border-[var(--primary-purple)] transition-colors duration-500 relative overflow-hidden">
                     <div class="absolute inset-0 bg-[var(--primary-purple)] opacity-0 group-hover:opacity-5 transition-opacity"></div>
-                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--primary-purple)] transition-colors">02</span>
+                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--primary-purple)] transition-colors">PASSO 02</span>
                     <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Monte seu Desafio</h3>
-                    <p class="text-sm text-[var(--text-secondary)]">Bora de gameplay! Defina sua meta, jogue Ranked e vença.</p>
+                    <p class="text-sm text-[var(--text-secondary)]">Bora de gameplay! Escolha sua missão, jogue Ranked e vença.</p>
                 </div>
                 <div class="card group hover:border-[var(--accent-pink)] transition-colors duration-500">
-                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-pink)] transition-colors">03</span>
+                    <span class="stat-label text-[var(--text-secondary)] group-hover:text-[var(--accent-pink)] transition-colors">PASSO 03</span>
                     <h3 class="text-2xl font-bold mt-2 mb-2 text-[var(--text-primary)]">Colete Recompensas</h3>
-                    <p class="text-sm text-[var(--text-secondary)]">Acumule GlitchCoins com suas vitórias e troque por prêmios reais.</p>
+                    <p class="text-sm text-[var(--text-secondary)]">Acumule GlitchCoins (GC) com suas vitórias e troque por Loot Real.</p>
                 </div>
             </div>
         </div>
@@ -149,7 +127,7 @@
                     <button id="google-login-btn" class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center gap-2 mx-auto">
                         Entrar com Google
                     </button>
-                    <p class="text-sm mt-4 text-[var(--text-secondary)]">Novo operador? <button id="login-goto-register" class="text-[var(--accent-cyan)] font-bold hover:underline">Iniciar Protocolo</button></p>
+                    <p class="text-sm mt-4 text-[var(--text-secondary)]">Novo jogador? <button id="login-goto-register" class="text-[var(--accent-cyan)] font-bold hover:underline">Criar Conta</button></p>
                 </div>
             </div>
         </div>
@@ -160,13 +138,13 @@
                 <h2 class="text-3xl font-bold text-center mb-8 font-[var(--font-display)] tracking-widest text-[var(--text-primary)]">REGISTRO</h2>
                 <div class="flex justify-between mb-8 px-2 relative">
                     <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-[var(--border-color)] -z-10"></div>
-                    <span id="step-ind-1" class="text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors">1. ACESSO</span>
-                    <span id="step-ind-2" class="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors">2. DADOS</span>
+                    <span id="step-ind-1" class="text-xs font-bold bg-[var(--bg-card)] px-2 text-[var(--primary-purple)] transition-colors">1. CONTA</span>
+                    <span id="step-ind-2" class="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors">2. PERFIL</span>
                     <span id="step-ind-3" class="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 transition-colors">3. FINAL</span>
                 </div>
                 <form id="register-form" class="space-y-5">
                     <p id="register-error-msg" class="text-[var(--accent-orange)] text-sm text-center hidden bg-red-500/10 p-2 rounded"></p>
-                    <!-- Steps 1, 2 e 3 (Mantidos iguais ao anterior para brevidade, lógica inalterada) -->
+                    <!-- Steps inalterados para manter funcionalidade -->
                     <div id="register-step-1" class="register-step space-y-4">
                         <input type="email" id="reg-email" class="form-input" placeholder="E-mail" autocomplete="email" required>
                         <input type="password" id="reg-password" class="form-input" placeholder="Senha (min 6)" autocomplete="new-password" required>
@@ -174,15 +152,15 @@
                         <button type="button" id="reg-next-step-1" class="w-full glass-card bg-[var(--primary-purple)] text-white font-bold py-3 mt-2 border-none hover:bg-[var(--primary-blue)] transition-colors">PRÓXIMO</button>
                     </div>
                     <div id="register-step-2" class="register-step hidden space-y-4">
-                        <input type="text" id="reg-fullname" class="form-input" placeholder="Nome Completo" autocomplete="name" required>
-                        <input type="text" id="reg-cpf" class="form-input" placeholder="CPF (apenas números)" required>
+                        <input type="text" id="reg-fullname" class="form-input" placeholder="Nome de Invocador (Real)" autocomplete="name" required>
+                        <input type="text" id="reg-cpf" class="form-input" placeholder="CPF (Apenas números)" required>
                         <input type="date" id="reg-birthdate" class="form-input text-[var(--text-secondary)]" required>
-                        <input type="text" id="reg-referral" class="form-input uppercase tracking-widest border-[var(--accent-cyan)]" placeholder="CÓD. CONVITE (OPCIONAL)">
+                        <input type="text" id="reg-referral" class="form-input uppercase tracking-widest border-[var(--accent-cyan)]" placeholder="CÓDIGO DE CONVITE">
                         <button type="button" id="reg-next-step-2" class="w-full glass-card bg-[var(--primary-purple)] text-white font-bold py-3 mt-2 border-none">PRÓXIMO</button>
                     </div>
                     <div id="register-step-3" class="register-step hidden space-y-4">
                         <div class="bg-[var(--bg-input)] border border-[var(--accent-orange)] p-4 rounded mb-4 text-xs text-[var(--text-secondary)]">
-                            <p class="text-[var(--accent-orange)] font-bold mb-2 text-sm uppercase tracking-wider flex items-center gap-2">⚠️ Regras Críticas:</p>
+                            <p class="text-[var(--accent-orange)] font-bold mb-2 text-sm uppercase tracking-wider flex items-center gap-2">⚠️ Fair Play:</p>
                             <ul class="list-disc pl-4 space-y-1">
                                 <li>Smurfing = <span class="text-[var(--text-primary)] font-bold">BANIMENTO</span>.</li>
                                 <li>Elojob = <span class="text-[var(--text-primary)] font-bold">BANIMENTO</span>.</li>
@@ -190,10 +168,10 @@
                         </div>
                         <div class="flex items-start mb-6 gap-3 p-2 bg-white/5 rounded border border-white/10">
                             <input id="reg-terms" type="checkbox" class="mt-1 accent-[var(--primary-purple)] w-4 h-4">
-                            <label for="reg-terms" class="text-xs text-[var(--text-secondary)]">Li e concordo com os <span id="open-terms-btn" class="text-[var(--primary-blue)] cursor-pointer font-bold hover:underline">Termos de Uso</span>.</label>
+                            <label for="reg-terms" class="text-xs text-[var(--text-secondary)]">Aceito os <span id="open-terms-btn" class="text-[var(--primary-blue)] cursor-pointer font-bold hover:underline">Termos</span> e regras da comunidade.</label>
                         </div>
                         <button type="button" id="reg-submit" class="w-full glass-card bg-gradient-to-r from-[var(--primary-purple)] to-[var(--accent-pink)] text-white font-bold py-4 mt-2 border-none opacity-50 cursor-not-allowed transition-all" disabled>
-                            <span id="reg-btn-text">CONFIRMAR CADASTRO</span>
+                            <span id="reg-btn-text">FINALIZAR CADASTRO</span>
                             <div id="reg-loader" class="loader w-6 h-6 mx-auto hidden"></div>
                         </button>
                     </div>
@@ -206,15 +184,16 @@
         <div id="terms-page" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg">
             <div class="glass-card w-full max-w-2xl max-h-[85vh] flex flex-col border border-[var(--border-color)]">
                 <div class="flex justify-between items-center pb-4 border-b border-[var(--border-color)]">
-                    <h2 class="text-xl font-bold font-[var(--font-display)] text-[var(--text-primary)]">TERMOS DE USO</h2>
+                    <h2 class="text-xl font-bold font-[var(--font-display)] text-[var(--text-primary)]">REGRAS DA ARENA</h2>
                     <button id="close-terms-btn" class="text-2xl hover:text-[var(--accent-orange)] transition-colors text-[var(--text-primary)]">&times;</button>
                 </div>
                 <div class="flex-grow overflow-y-auto py-6 text-sm text-[var(--text-secondary)] space-y-4 custom-scroll pr-2">
-                    <p>1. GlitchCoins (GC) são moedas virtuais de utilidade exclusiva na plataforma.</p>
-                    <p>2. A conversão de Real para GC e vice-versa obedece à cotação oficial da plataforma.</p>
+                    <p>1. GlitchCoins (GC) são tokens de utilidade para uso exclusivo na plataforma.</p>
+                    <p>2. A troca de Tokens por recompensas reais obedece à cotação oficial.</p>
+                    <p>3. Jogar em contas de terceiros ou elo inferior ao real (Smurfing) resultará em bloqueio permanente.</p>
                 </div>
                 <div class="pt-4 border-t border-[var(--border-color)] text-center">
-                    <button id="terms-ok-btn" class="glass-card bg-[var(--primary-blue)] px-8 py-3 font-bold text-white w-full hover:bg-[var(--primary-purple)] border-none">LI E CONCORDO</button>
+                    <button id="terms-ok-btn" class="glass-card bg-[var(--primary-blue)] px-8 py-3 font-bold text-white w-full hover:bg-[var(--primary-purple)] border-none">ACEITAR</button>
                 </div>
             </div>
         </div>
@@ -228,9 +207,9 @@
             <section class="glass-card mb-8 p-0 overflow-hidden border-none">
                 <div class="bg-gradient-to-r from-[var(--bg-card)] to-[#1a1a2e] p-6 border-b border-[var(--border-color)]">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold font-[var(--font-display)] tracking-wider text-[var(--text-primary)]">ARENA DE JOGOS</h2>
+                        <h2 class="text-xl font-bold font-[var(--font-display)] tracking-wider text-[var(--text-primary)]">SELEÇÃO DE JOGO</h2>
                         <span class="text-[10px] font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1">
-                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> ONLINE
+                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> SERVIDORES ON
                         </span>
                     </div>
                 </div>
@@ -243,7 +222,7 @@
                         </div>
                         <div class="flex-1">
                             <h3 class="font-bold text-xl text-[var(--text-primary)] group-hover:text-[var(--primary-purple)] transition-colors">League of Legends</h3>
-                            <p class="text-xs text-[var(--text-secondary)] mt-1">Desafios de KDA, Vitória e Farm (Summoner's Rift)</p>
+                            <p class="text-xs text-[var(--text-secondary)] mt-1">Missões de Kills, Vitórias e Objetivos.</p>
                         </div>
                         <div class="text-[var(--accent-cyan)] text-2xl group-hover:translate-x-2 transition-transform">→</div>
                     </div>
@@ -253,56 +232,55 @@
                         <div class="w-16 h-16 bg-[#FF4655] rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">V</div>
                         <div>
                             <h3 class="font-bold text-xl text-[var(--text-primary)]">Valorant</h3>
-                            <p class="text-xs mt-1 text-[var(--text-secondary)]">Módulo em desenvolvimento</p>
+                            <p class="text-xs mt-1 text-[var(--text-secondary)]">Em desenvolvimento...</p>
                         </div>
                     </div>
                 </div>
             </section>
-            <!-- (Removido card de conexão daqui) -->
         </div>
 
         <!-- Challenges Page -->
         <div id="challenges-page" class="page hidden">
             <button id="back-to-home" class="mb-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-2 font-bold text-sm uppercase tracking-wider transition-colors">
-                <span>←</span> Voltar para Dashboard
+                <span>←</span> Voltar
             </button>
             
             <div class="flex justify-between items-end mb-8">
                 <div>
-                    <h1 id="challenges-title" class="text-3xl font-bold font-[var(--font-display)] text-[var(--primary-blue)] leading-tight">DESAFIOS</h1>
-                    <p id="challenges-subtitle" class="text-sm text-[var(--text-secondary)] mt-1">Calculando probabilidades...</p>
+                    <h1 id="challenges-title" class="text-3xl font-bold font-[var(--font-display)] text-[var(--primary-blue)] leading-tight">MISSÕES</h1>
+                    <p id="challenges-subtitle" class="text-sm text-[var(--text-secondary)] mt-1">Analisando seu perfil de jogador...</p>
                 </div>
             </div>
             
             <div id="challenges-list" class="space-y-4 mb-8"></div>
             
             <div id="request-bet-card" class="hidden glass-card border-dashed border-2 border-[var(--border-color)] text-center bg-transparent hover:border-[var(--primary-purple)] cursor-pointer group p-8 transition-all">
-                <h3 class="font-bold mb-2 text-xl group-hover:text-[var(--primary-purple)] transition-colors text-[var(--text-primary)]">CRIE SEU PRÓPRIO DESAFIO</h3>
-                <p class="text-sm text-[var(--text-secondary)] mb-6">Defina sua própria meta de Kills e desafie o algoritmo.</p>
-                <button id="open-request-bet-modal" class="glass-card px-8 py-3 text-sm font-bold bg-white/5 hover:bg-white/10 border-none text-[var(--text-primary)]">PERSONALIZAR META</button>
+                <h3 class="font-bold mb-2 text-xl group-hover:text-[var(--primary-purple)] transition-colors text-[var(--text-primary)]">CRIE SUA MISSÃO</h3>
+                <p class="text-sm text-[var(--text-secondary)] mb-6">Defina sua própria meta de Kills e desafie o sistema.</p>
+                <button id="open-request-bet-modal" class="glass-card px-8 py-3 text-sm font-bold bg-white/5 hover:bg-white/10 border-none text-[var(--text-primary)]">PERSONALIZAR</button>
             </div>
         </div>
 
-        <!-- Bets & History (Placeholders) -->
-        <div id="bets-page" class="page hidden"><h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-yellow-500 pl-4">APOSTAS ATIVAS</h1><div id="active-bets-list" class="space-y-4"></div></div>
+        <!-- Bets & History -->
+        <div id="bets-page" class="page hidden"><h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-yellow-500 pl-4">MISSÕES ATIVAS</h1><div id="active-bets-list" class="space-y-4"></div></div>
         <div id="history-page" class="page hidden"><h1 class="text-2xl font-bold mb-6 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-[var(--text-secondary)] pl-4">HISTÓRICO</h1><div id="history-bets-list" class="space-y-4"></div></div>
         
-        <!-- PROFILE PAGE (Atualizado com Configurações de Jogo e Conversão) -->
+        <!-- PROFILE PAGE (Gamified) -->
         <div id="profile-page" class="page hidden">
-            <h1 class="text-2xl font-bold mb-8 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-[var(--primary-purple)] pl-4">PERFIL DO JOGADOR</h1>
+            <h1 class="text-2xl font-bold mb-8 font-[var(--font-display)] text-[var(--text-primary)] border-l-4 border-[var(--primary-purple)] pl-4">PERFIL</h1>
             
             <!-- Wallet Stats -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="glass-card p-6 border-l-4 border-[var(--primary-blue)] relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl text-[var(--text-primary)]">💰</div>
-                    <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Saldo Real (GC)</span>
+                    <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Saldo GC (Disponível)</span>
                     <span id="wallet-balance" class="stat-value text-3xl font-bold text-[var(--text-primary)] font-[Orbitron] flex items-center gap-2">
                         <svg class="w-6 h-6 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> 0.00
                     </span>
                 </div>
                 <div class="glass-card p-6 border-l-4 border-[var(--primary-purple)] relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl text-[var(--text-primary)]">🎁</div>
-                    <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Bônus (GC)</span>
+                    <span class="stat-label text-xs text-[var(--text-secondary)] uppercase tracking-widest block mb-2">Bônus GC</span>
                     <span id="bonus-balance" class="stat-value text-3xl font-bold text-[var(--primary-purple)] font-[Orbitron] flex items-center gap-2">
                         <svg class="w-6 h-6 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> 0.00
                     </span>
@@ -312,16 +290,16 @@
             <!-- Actions -->
             <div class="grid grid-cols-2 gap-4 mb-8">
                 <button id="open-deposit-modal" class="glass-card py-4 font-bold bg-green-600/20 hover:bg-green-600/30 border-green-500/50 text-green-400 transition-all border shadow-[0_0_15px_rgba(34,197,94,0.2)] hover:shadow-[0_0_25px_rgba(34,197,94,0.4)]">
-                    COMPRAR GC
+                    ADQUIRIR TOKENS
                 </button>
                 <button id="open-withdraw-modal" class="glass-card py-4 font-bold hover:bg-white/10 transition-all text-[var(--text-primary)]">
-                    RESGATAR (PIX)
+                    RESGATAR LOOT
                 </button>
             </div>
 
-            <!-- Game Connections (Movido da Home) -->
+            <!-- Game Connections -->
             <section class="glass-card p-6 mb-8 border border-[var(--accent-cyan)]/30">
-                <h3 class="font-bold mb-4 text-sm text-[var(--text-secondary)] uppercase tracking-widest border-b border-white/10 pb-2">Conexões de Jogo</h3>
+                <h3 class="font-bold mb-4 text-sm text-[var(--text-secondary)] uppercase tracking-widest border-b border-white/10 pb-2">Vínculo de Jogo</h3>
                 <div class="flex justify-between items-center">
                     <div>
                         <p class="text-[var(--text-primary)] font-bold text-lg">League of Legends</p>
@@ -333,11 +311,11 @@
                 </div>
             </section>
 
-            <!-- Rewards / Rollover (Botão de Conversão Destacado) -->
+            <!-- Rewards -->
             <div id="rollover-container" class="glass-card p-6 mb-8 hidden border border-[var(--primary-purple)]/30 bg-gradient-to-br from-[var(--bg-card)] to-[var(--primary-purple)]/5">
-                <h3 class="font-bold mb-3 text-sm text-[var(--text-secondary)] uppercase tracking-widest">Central de Recompensas</h3>
+                <h3 class="font-bold mb-3 text-sm text-[var(--text-secondary)] uppercase tracking-widest">Progressão de Bônus</h3>
                 <div class="flex justify-between text-sm mb-3">
-                    <span class="text-[var(--text-secondary)] text-xs font-bold">Meta de Apostas (Rollover)</span>
+                    <span class="text-[var(--text-secondary)] text-xs font-bold">Meta de XP (Rollover)</span>
                     <span id="rollover-text" class="font-bold text-[var(--primary-purple)]">GC 0.00</span>
                 </div>
                 <div class="progress-container h-3 bg-black/50 rounded-full overflow-hidden border border-white/5 mb-4">
@@ -347,23 +325,23 @@
                 </div>
                 <button id="convert-bonus-btn" class="w-full glass-card py-4 text-sm font-bold opacity-50 cursor-not-allowed transition-all border-none bg-white/5 text-[var(--text-primary)] shadow-lg flex items-center justify-center gap-2" disabled>
                     <svg class="w-4 h-4 text-yellow-400"><use href="#icon-glitch-coin"></use></svg>
-                    CONVERTER BÔNUS EM SALDO REAL
+                    DESBLOQUEAR BÔNUS
                 </button>
             </div>
 
             <!-- Tools -->
             <div class="glass-card p-6 mb-8">
-                <h3 class="font-bold mb-4 text-sm text-[var(--text-secondary)] uppercase tracking-widest">CUPONS</h3>
+                <h3 class="font-bold mb-4 text-sm text-[var(--text-secondary)] uppercase tracking-widest">CÓDIGOS</h3>
                 <div class="flex gap-2">
-                    <input id="coupon-input" class="form-input mb-0 flex-1" placeholder="CÓDIGO PROMOCIONAL">
-                    <button id="redeem-coupon-btn" class="glass-card px-8 font-bold bg-[var(--primary-purple)] text-white border-none hover:bg-[var(--primary-blue)]">USAR</button>
+                    <input id="coupon-input" class="form-input mb-0 flex-1" placeholder="CUPOM PROMOCIONAL">
+                    <button id="redeem-coupon-btn" class="glass-card px-8 font-bold bg-[var(--primary-purple)] text-white border-none hover:bg-[var(--primary-blue)]">ATIVAR</button>
                 </div>
             </div>
 
             <!-- Identity -->
             <div class="glass-card p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-sm text-[var(--text-secondary)] uppercase tracking-widest">IDENTIDADE (KYC)</h3>
+                    <h3 class="font-bold text-sm text-[var(--text-secondary)] uppercase tracking-widest">VERIFICAÇÃO (KYC)</h3>
                     <span id="kyc-status" class="text-[10px] font-bold bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded border border-yellow-500/30">PENDENTE</span>
                 </div>
                 <div id="kyc-content" class="text-sm text-[var(--text-secondary)] space-y-2 bg-black/20 p-4 rounded border border-white/5">
@@ -371,7 +349,7 @@
                     <p class="flex justify-between"><span>CPF:</span> <span id="kyc-cpf" class="text-[var(--text-primary)] font-bold font-mono">-</span></p>
                 </div>
                 <div id="kyc-loading" class="hidden text-center mt-4"><div class="loader w-6 h-6 inline-block"></div></div>
-                <button id="kyc-verify-btn" class="w-full mt-4 glass-card py-3 text-xs font-bold text-[var(--primary-blue)] hover:text-white hover:bg-[var(--primary-blue)] transition-all hidden border border-[var(--primary-blue)]">VALIDAR DADOS AGORA</button>
+                <button id="kyc-verify-btn" class="w-full mt-4 glass-card py-3 text-xs font-bold text-[var(--primary-blue)] hover:text-white hover:bg-[var(--primary-blue)] transition-all hidden border border-[var(--primary-blue)]">VERIFICAR CONTA</button>
             </div>
         </div>
     </div>
@@ -385,7 +363,7 @@
             </button>
             <button data-page="bets-page" class="nav-item flex flex-col items-center text-[var(--text-secondary)] transition-colors">
                 <span class="text-xl mb-1">⚔️</span>
-                <span class="text-[10px] font-bold tracking-wide">Desafios</span>
+                <span class="text-[10px] font-bold tracking-wide">Missões</span>
             </button>
             <button data-page="history-page" class="nav-item flex flex-col items-center text-[var(--text-secondary)] transition-colors">
                 <span class="text-xl mb-1">📜</span>
@@ -406,17 +384,14 @@
         </div>
     </div>
 
-    <!-- MODALS -->
+    <!-- MODALS (Gamificados) -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/80 z-[60] backdrop-blur-md transition-opacity duration-300"></div>
 
-    <!-- Deposit Modal (Atualizado com Taxa de Câmbio) -->
     <div id="deposit-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto relative border border-[var(--border-color)] shadow-2xl">
-            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-[var(--text-primary)] text-center">COMPRAR GC</h3>
-            <p class="text-xs text-center text-yellow-500 mb-6 font-bold bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
-                COTAÇÃO: R$ 1,00 = 1000 GC
-            </p>
-            
+            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-[var(--text-primary)] text-center">ADQUIRIR TOKENS</h3>
+            <p class="text-xs text-center text-yellow-500 mb-6 font-bold bg-yellow-500/10 p-2 rounded border border-yellow-500/20">COTAÇÃO: R$ 1,00 = 1000 GC</p>
+            <!-- Step 1 e 2 idênticos ao anterior, apenas textos internos já ajustados na lógica -->
             <div id="deposit-step-1">
                 <div class="mb-6">
                     <label class="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">Valor em Reais (R$)</label>
@@ -435,58 +410,53 @@
                 </div>
                 <div id="deposit-loader" class="hidden text-center mt-4"><div class="loader w-8 h-8 mx-auto"></div></div>
             </div>
-            
-            <!-- Step 2 (QR Code) -->
             <div id="deposit-step-2" class="hidden text-center">
                 <div class="bg-white p-4 rounded-xl inline-block mb-6 shadow-[0_0_20px_rgba(255,255,255,0.1)]"><img id="deposit-qrcode-img" class="w-48 h-48 mix-blend-multiply"></div>
                 <div class="flex bg-black/40 p-3 rounded-lg mb-6 border border-white/10 items-center gap-2">
                     <input id="deposit-copypaste" class="bg-transparent w-full text-xs truncate outline-none text-[var(--text-secondary)] font-mono" readonly>
                     <button id="deposit-copy-btn" class="text-[var(--primary-purple)] font-bold text-xs hover:text-white transition-colors whitespace-nowrap">COPIAR</button>
                 </div>
-                <button id="deposit-finish-btn" class="w-full glass-card py-4 font-bold hover:bg-white/10 border-none text-[var(--text-primary)]">FECHAR E AGUARDAR</button>
+                <button id="deposit-finish-btn" class="w-full glass-card py-4 font-bold hover:bg-white/10 border-none text-[var(--text-primary)]">FECHAR</button>
             </div>
         </div>
     </div>
 
-    <!-- Withdraw Modal (Atualizado com Conversão de Saque) -->
+    <!-- Withdraw Modal -->
     <div id="withdraw-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
-            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-[var(--text-primary)] text-center">RESGATAR SALDO</h3>
-            <p class="text-xs text-[var(--text-secondary)] mb-2 text-center">Seus GlitchCoins serão convertidos em Reais e enviados via PIX.</p>
-            <p class="text-xs text-center text-yellow-500 mb-6 font-bold bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
-                CONVERSÃO: 1000 GC = R$ 1,00
-            </p>
+            <h3 class="font-bold text-xl mb-2 font-[var(--font-display)] text-[var(--text-primary)] text-center">RESGATAR LOOT</h3>
+            <p class="text-xs text-[var(--text-secondary)] mb-2 text-center">Tokens serão convertidos e enviados para seu PIX.</p>
+            <p class="text-xs text-center text-yellow-500 mb-6 font-bold bg-yellow-500/10 p-2 rounded border border-yellow-500/20">1000 GC = R$ 1,00</p>
             
             <div class="mb-6">
                 <label class="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2 block flex justify-between">
                     <span>Quantidade (GC)</span>
-                    <span class="text-[var(--accent-cyan)]">Disponível: <span id="withdraw-max-balance" class="font-bold">0.00</span></span>
+                    <span class="text-[var(--accent-cyan)]">Disponível: <span id="withdraw-max-balance" class="font-bold">0</span></span>
                 </label>
                 <input id="withdraw-amount" type="number" class="form-input text-center text-2xl font-bold" placeholder="0">
             </div>
-            
             <div class="mb-6">
                 <label class="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">Chave PIX (CPF)</label>
                 <input id="withdraw-pix-key" class="form-input bg-black/50 text-[var(--text-secondary)] text-center font-mono" readonly>
             </div>
-
             <p id="withdraw-error-msg" class="text-[var(--accent-orange)] text-xs hidden mb-4 text-center bg-red-500/10 p-2 rounded"></p>
-            
             <div class="flex gap-3">
                 <button id="withdraw-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
-                <button id="withdraw-confirm-btn" class="flex-1 glass-card bg-[var(--primary-purple)] hover:bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg transition-all">SOLICITAR SAQUE</button>
+                <button id="withdraw-confirm-btn" class="flex-1 glass-card bg-[var(--primary-purple)] hover:bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg transition-all">CONFIRMAR RESGATE</button>
             </div>
             <div id="withdraw-loader" class="hidden text-center mt-4"><div class="loader w-8 h-8 mx-auto"></div></div>
         </div>
     </div>
 
-    <!-- Connect Modal (Mantido) -->
+    <!-- Outros Modais (Connect, KYC, BetSlip, Request) mantêm estrutura mas herdam estilos e textos compatíveis -->
+    <!-- (Omitido para brevidade pois não mudam texto crítico, apenas estilo já aplicado) -->
+    <!-- Connect Modal -->
     <div id="connect-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto text-center shadow-2xl border border-[var(--border-color)]">
-            <h3 id="connect-modal-title" class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">CONECTAR CONTA</h3>
+            <h3 id="connect-modal-title" class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">VINCULAR CONTA</h3>
             <div class="mb-6">
                 <input id="riot-id-input" class="form-input text-center text-lg font-bold" placeholder="Nome#TAG">
-                <p class="text-[10px] text-[var(--text-secondary)] mt-2">Exemplo: Faker#KR1</p>
+                <p class="text-[10px] text-[var(--text-secondary)] mt-2">Ex: Faker#KR1</p>
             </div>
             <div class="flex items-center justify-center gap-3 mb-6 bg-white/5 p-3 rounded border border-white/5 hover:border-white/10 transition-colors">
                 <input type="checkbox" id="connect-terms-check" class="accent-[var(--primary-purple)] w-4 h-4 cursor-pointer">
@@ -501,81 +471,68 @@
         </div>
     </div>
 
-    <!-- KYC Modal (Mantido) -->
+    <!-- KYC Modal -->
     <div id="kyc-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto shadow-2xl">
-            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)] text-center">DADOS PESSOAIS</h3>
-            <p class="text-xs text-[var(--text-secondary)] mb-4 text-center">Necessário para processar saques (Lei Federal).</p>
+            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)] text-center">VERIFICAÇÃO</h3>
+            <p class="text-xs text-[var(--text-secondary)] mb-4 text-center">Necessário para liberar resgates (Segurança).</p>
             <form id="kyc-form" class="space-y-4">
                 <div>
                     <label class="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 block">Nome Completo</label>
-                    <input id="kyc-modal-fullname" class="form-input" placeholder="Como no RG" autocomplete="name" required>
+                    <input id="kyc-modal-fullname" class="form-input" placeholder="Nome Civil" autocomplete="name" required>
                 </div>
                 <div>
                     <label class="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 block">CPF</label>
                     <input id="kyc-modal-cpf" class="form-input" placeholder="000.000.000-00" required>
                 </div>
                 <div>
-                    <label class="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 block">Data de Nascimento</label>
+                    <label class="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 block">Nascimento</label>
                     <input type="date" id="kyc-modal-birthdate" class="form-input text-[var(--text-secondary)]" required>
                 </div>
                 <p id="kyc-error-msg" class="text-[var(--accent-orange)] text-xs hidden text-center bg-red-500/10 p-2 rounded"></p>
                 <div class="flex gap-3 mt-6">
                     <button type="button" id="kyc-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
-                    <button type="submit" id="kyc-modal-submit" class="flex-1 glass-card bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg">SALVAR</button>
+                    <button type="submit" id="kyc-modal-submit" class="flex-1 glass-card bg-[var(--primary-blue)] text-white border-none py-3 font-bold text-xs shadow-lg">ENVIAR</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Bet Slip (Atualizado com Ícone) -->
+    <!-- Bet Slip -->
     <div id="bet-slip-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto flex flex-col max-h-[80vh] shadow-2xl border border-[var(--primary-purple)]/30">
             <div class="flex justify-between items-center mb-4 pb-4 border-b border-[var(--border-color)]">
-                <h3 class="font-bold font-[var(--font-display)] text-[var(--text-primary)] text-lg tracking-wider">BOLETIM DE APOSTA</h3>
+                <h3 class="font-bold font-[var(--font-display)] text-[var(--text-primary)] text-lg tracking-wider">MISSÃO ATIVA</h3>
                 <button id="bet-slip-modal-close" class="text-2xl hover:text-[var(--accent-orange)] transition-colors text-[var(--text-primary)]">&times;</button>
             </div>
-            
             <div id="bet-slip-list" class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 custom-scroll"></div>
-            
             <div class="pt-4 border-t border-[var(--border-color)] bg-black/20 -mx-6 px-6 pb-2">
                 <p id="bet-slip-limit-info" class="text-xs text-[var(--accent-orange)] text-center hidden mb-3 bg-red-500/10 p-1 rounded border border-red-500/20"></p>
-                
                 <div class="flex justify-between text-sm mb-3">
-                    <span class="text-[var(--text-secondary)]">Multiplicador Total:</span>
+                    <span class="text-[var(--text-secondary)]">Multiplicador:</span>
                     <span id="bet-slip-total-odd" class="font-bold text-[var(--primary-purple)] text-lg">1.00x</span>
                 </div>
-                
                 <div class="mb-4 relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-400 font-bold flex items-center gap-1">
-                        <svg class="w-4 h-4"><use href="#icon-glitch-coin"></use></svg>
-                    </span>
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-400 font-bold flex items-center gap-1"><svg class="w-4 h-4"><use href="#icon-glitch-coin"></use></svg></span>
                     <input type="number" id="bet-amount-input" class="form-input text-right text-xl font-bold pl-12" value="10">
                 </div>
-                
                 <div class="flex justify-between font-bold mb-6 bg-[var(--bg-deep)] p-3 rounded border border-white/5">
-                    <span class="text-[var(--text-secondary)] text-xs uppercase tracking-wider self-center">Retorno Potencial</span>
-                    <span id="bet-potential-winnings" class="text-[var(--accent-cyan)] text-xl font-[Orbitron] flex items-center gap-2">
-                        <svg class="w-5 h-5 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> 10.00
-                    </span>
+                    <span class="text-[var(--text-secondary)] text-xs uppercase tracking-wider self-center">Loot Potencial</span>
+                    <span id="bet-potential-winnings" class="text-[var(--accent-cyan)] text-xl font-[Orbitron] flex items-center gap-2"><svg class="w-5 h-5 text-yellow-400"><use href="#icon-glitch-coin"></use></svg> 10.00</span>
                 </div>
-                
                 <p id="bet-slip-error-msg" class="text-[var(--accent-orange)] text-xs text-center hidden mb-3 bg-red-500/10 p-2 rounded"></p>
-                
-                <button id="place-bet-btn" class="w-full glass-card bg-gradient-to-r from-[var(--primary-purple)] to-[var(--primary-blue)] text-white border-none py-4 font-bold shadow-[0_0_20px_rgba(127,65,255,0.4)] hover:shadow-[0_0_30px_rgba(127,65,255,0.6)] hover:brightness-110 transition-all uppercase tracking-widest text-sm">
-                    ACEITAR DESAFIO
-                </button>
+                <button id="place-bet-btn" class="w-full glass-card bg-gradient-to-r from-[var(--primary-purple)] to-[var(--primary-blue)] text-white border-none py-4 font-bold shadow-[0_0_20px_rgba(127,65,255,0.4)] hover:shadow-[0_0_30px_rgba(127,65,255,0.6)] hover:brightness-110 transition-all uppercase tracking-widest text-sm">CONFIRMAR MISSÃO</button>
                 <div id="place-bet-loader" class="hidden text-center mt-2"><div class="loader w-8 h-8 mx-auto"></div></div>
             </div>
         </div>
     </div>
 
-    <!-- Request Bet (Custom) - Mantido, apenas ícones adicionados se necessário -->
+    <!-- Request Bet -->
     <div id="request-bet-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div class="glass-card w-full max-w-sm pointer-events-auto text-center shadow-2xl border border-[var(--border-color)]">
-            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">META PERSONALIZADA</h3>
+            <h3 class="font-bold text-xl mb-6 font-[var(--font-display)] text-[var(--text-primary)]">MISSÃO PERSONALIZADA</h3>
             <div id="request-form-container">
-                <p class="text-sm text-[var(--text-secondary)] mb-6">Quantas <span id="request-target-label" class="text-[var(--text-primary)] font-bold text-lg mx-1 border-b border-[var(--primary-purple)]">Kills</span> você garante fazer?</p>
+                <p class="text-sm text-[var(--text-secondary)] mb-6">Quantas <span id="request-target-label" class="text-[var(--text-primary)] font-bold text-lg mx-1 border-b border-[var(--primary-purple)]">Kills</span> você garante?</p>
                 <div class="relative mb-2 max-w-[150px] mx-auto">
                     <input type="number" id="request-target-input" class="form-input text-center font-bold text-4xl p-4 h-20 bg-black/30 border-white/10 focus:border-[var(--primary-purple)]" placeholder="0">
                 </div>
@@ -583,7 +540,7 @@
                 <p id="request-error-msg" class="text-[var(--accent-orange)] text-xs mb-6 hidden bg-red-500/10 p-2 rounded"></p>
                 <div class="flex gap-3">
                     <button id="request-modal-cancel" class="flex-1 glass-card py-3 font-bold text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 border-none">CANCELAR</button>
-                    <button id="request-modal-submit" class="flex-1 glass-card bg-[var(--primary-purple)] text-white border-none py-3 font-bold text-xs shadow-lg hover:bg-[var(--primary-blue)] transition-colors">CALCULAR ODD</button>
+                    <button id="request-modal-submit" class="flex-1 glass-card bg-[var(--primary-purple)] text-white border-none py-3 font-bold text-xs shadow-lg hover:bg-[var(--primary-blue)] transition-colors">CALCULAR</button>
                 </div>
             </div>
             <div id="request-result-container" class="hidden">
@@ -593,19 +550,19 @@
                     <span id="request-result-odd" class="text-5xl font-bold text-[var(--accent-neon)] font-[Orbitron] relative z-10 drop-shadow-[0_0_10px_rgba(223,255,0,0.5)]">1.00x</span>
                     <h4 id="request-result-title" class="font-bold mt-4 text-sm text-white relative z-10 border-t border-white/10 pt-4">...</h4>
                 </div>
-                <button id="request-add-to-slip" class="w-full glass-card bg-[var(--primary-blue)] text-white border-none py-4 font-bold mb-3 hover:brightness-110 shadow-lg transition-all">ADICIONAR AO BOLETIM</button>
-                <button id="request-try-again" class="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline transition-colors">Tentar outro valor</button>
+                <button id="request-add-to-slip" class="w-full glass-card bg-[var(--primary-blue)] text-white border-none py-4 font-bold mb-3 hover:brightness-110 shadow-lg transition-all">ACEITAR</button>
+                <button id="request-try-again" class="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline transition-colors">Outro valor</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Message -->
+    <!-- Toast -->
     <div id="message-modal" class="hidden fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-full max-w-xs text-center pointer-events-none">
         <div id="message-modal-content" class="inline-block px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-bold text-sm border border-white/10 backdrop-blur-xl transform transition-all duration-300 scale-95 opacity-0"></div>
     </div>
 
-    <!-- JS v4.3 -->
-    <script type="module" src="app.js?v=4.3"></script>
+    <!-- JS v5.6 -->
+    <script type="module" src="app.js?v=5.6"></script>
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
