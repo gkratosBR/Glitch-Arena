@@ -412,7 +412,7 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
     if not doc.exists:
         logger.warning(f"AUTO-HEAL: Usuário {user_id} sem dados. Recriando...")
         new_user_data = {
-            "email": decoded_token.get('email', ''), "wallet": 0.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
+            "email": decoded_token.get('email', ''), "wallet": 100.0, "bonus_wallet": 0.0, "rollover_target": 0.0,
             "connectedAccounts": {}, "createdAt": firestore.SERVER_TIMESTAMP, "profit_loss": 0.0, "total_bets_made": 0,
             "fullname": "", "cpf": "", "birthdate": "", "kyc_status": "pending", "total_wagered": 0.0, "total_deposited": 0.0, 
             "currentBetLimit": 3.00, "my_referral_code": _generate_referral_code("GLITCH"), "referred_by": None, "connection_status": "idle"
@@ -424,7 +424,7 @@ async def get_user_data_endpoint(decoded_token: dict = Depends(get_current_user_
     limit = _calculate_user_bet_limit(data, config)
     if limit != data.get('currentBetLimit'): ref.update({'currentBetLimit': limit}); data['currentBetLimit'] = limit
     return {
-        "wallet": data.get("wallet", 0.0), "bonus_wallet": data.get("bonus_wallet", 0.0),
+        "wallet": data.get("wallet", 100.0), "bonus_wallet": data.get("bonus_wallet", 0.0),
         "rollover_target": max(0, data.get("rollover_target", 0.0)), "connectedAccounts": data.get("connectedAccounts", {}),
         "profit_loss": data.get("profit_loss", 0.0), "total_bets_made": data.get("total_bets_made", 0),
         "fullname": data.get("fullname", ""), "cpf": data.get("cpf", ""), "birthdate": data.get("birthdate", ""),
